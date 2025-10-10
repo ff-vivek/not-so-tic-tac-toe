@@ -8,15 +8,15 @@ This document outlines the phased development approach for building Gridlock X &
 
 ### 0.1 Project Infrastructure
 - [x] Initialize Flutter project with proper folder structure
-- [ ] Set up version control (Git) with branch strategy (main, develop, feature/*)
-- [ ] Configure CI/CD pipeline (GitHub Actions / GitLab CI)
-- [ ] Set up development, staging, and production environments
+- [x] Set up version control (Git) with branch strategy (main, develop, feature/*)
+- [x] Configure CI/CD pipeline (GitHub Actions / GitLab CI)
+- [ ]Set up development, staging, and production environments
 - [ ] Configure code quality tools (linting, analysis_options.yaml)
 - [ ] Set up dependency management and version pinning strategy
 
 ### 0.2 Backend Infrastructure (Epic 4 - Foundation)
 - [ ] Choose and set up cloud provider (Firebase)
-- [ ] Set up database (Firestore for real-time / PostgreSQL for relational data)
+- [ ] Set up database (Firestore for real-time)
 - [ ] Configure authentication service (Firebase Auth / Auth0)
   - Google Sign-In
   - Apple Sign-In
@@ -40,7 +40,7 @@ This document outlines the phased development approach for building Gridlock X &
 ## **Phase 1: MVP - Core Architecture & Game Foundation**
 
 ### 1.1 App Architecture Setup
-- [ ] Implement Clean Architecture with feature-based structure:
+- [x] Implement Clean Architecture with feature-based structure:
   ```
   lib/
   ├── core/              # Shared utilities, constants, themes
@@ -49,23 +49,23 @@ This document outlines the phased development approach for building Gridlock X &
   ├── presentation/      # UI, state management, widgets
   └── main.dart
   ```
-- [ ] Set up state management solution (Riverpod / Bloc / Provider)
-- [ ] Create dependency injection container
+- [x] Set up state management solution (Riverpod / Bloc / Provider)
+- [x] Create dependency injection container
 - [ ] Implement routing and navigation system
 - [ ] Set up error handling and logging framework
 
 ### 1.2 Game Rules Engine (Epic 1 - Core Foundation)
-- [ ] Design game state model:
+- [x] Design game state model:
   - Board representation (3x3 grid)
   - Player turn tracking
   - Move validation
   - Win/loss/draw detection
-- [ ] Implement core Tic-Tac-Toe logic with comprehensive unit tests:
+- [x] Implement core Tic-Tac-Toe logic with comprehensive unit tests:
   - Valid move checking
   - All winning combinations (rows, columns, diagonals)
   - Draw condition detection
   - Edge cases (invalid moves, game already ended)
-- [ ] Create modifier system architecture:
+- [x] Create modifier system architecture:
   - Abstract `GameModifier` interface
   - Modifier factory pattern for instantiation
   - Modifier-specific rule injection
@@ -144,23 +144,23 @@ Widget tests for all components
 Integration tests for navigation flows
 
 ### 2.3 Backend Integration - Matchmaking (Epic 1)
-- [ ] Create matchmaking service API:
+- [x] Create matchmaking service API:
   - `POST /matchmaking/join` - Enter queue
   - `DELETE /matchmaking/leave` - Exit queue
   - `GET /matchmaking/status` - Check queue status
-- [ ] Implement matchmaking queue logic:
+- [x] Implement matchmaking queue logic:
   - FIFO pairing
   - ELO-based matching (future enhancement)
-- [ ] Client-side matchmaking state management
+- [x] Client-side matchmaking state management
 - [ ] Handle connection errors and timeouts
 
 ### 2.4 Backend Integration - Real-time Game (Epic 1)
-- [ ] Set up WebSocket connection for live matches
-- [ ] Implement server-authoritative game logic:
+- [x] Set up WebSocket connection for live matches *(implemented via Firestore real-time streams during MVP)*
+- [x] Implement server-authoritative game logic:
   - Move validation
   - Turn enforcement
   - Game state synchronization
-- [ ] Create match management API:
+- [x] Create match management API:
   - `POST /match/move` - Submit player move
   - `GET /match/{matchId}/state` - Fetch current state
 - [ ] Handle disconnection/reconnection scenarios
