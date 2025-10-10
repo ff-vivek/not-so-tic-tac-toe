@@ -20,11 +20,15 @@ ThemeData buildAppTheme() {
     textTheme: base.textTheme.apply(
       displayColor: primaryColor,
       bodyColor: primaryColor,
+      fontFamily: 'NotoSans',
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
-        textStyle: const TextStyle(fontWeight: FontWeight.bold),
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontFamily: 'NotoSans',
+        ),
       ),
     ),
   );
