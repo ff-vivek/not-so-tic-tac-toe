@@ -121,10 +121,20 @@ fi
 
 # Step 5: Run Flutter App
 print_step "Step 5: Launching Flutter App"
-print_info "Running app on: $SIMULATOR_NAME"
-print_info "Press 'q' in the terminal to quit the app"
-echo ""
 
-# Run flutter with hot reload enabled
-flutter run -d "$(xcrun simctl list devices | grep "Booted" | head -1 | sed 's/.*(//' | sed 's/).*//')"
+# Specific device ID for iPhone 16 Plus
+DEVICE_ID="2AFF1AEA-9D1C-420E-ACE5-DA10B7493788"
+
+# Check if specific device is available, otherwise use any booted simulator
+if xcrun simctl list devices | grep -q "$DEVICE_ID"; then
+    print_info "Running app on: iPhone 16 Plus"
+    print_info "Press 'q' in the terminal to quit the app"
+    echo ""
+    flutter run -d "$DEVICE_ID"
+else
+    print_info "iPhone 16 Plus not found, using booted simulator: $SIMULATOR_NAME"
+    print_info "Press 'q' in the terminal to quit the app"
+    echo ""
+    flutter run -d "$(xcrun simctl list devices | grep "Booted" | head -1 | sed 's/.*(//' | sed 's/).*//')"
+fi
 

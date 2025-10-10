@@ -109,8 +109,18 @@ run_ios() {
     start_ios_simulator
     
     print_step "Launching app on iOS"
-    DEVICE_ID=$(xcrun simctl list devices | grep "Booted" | head -1 | sed 's/.*(//' | sed 's/).*//')
-    flutter run -d "$DEVICE_ID"
+    
+    # Prefer specific device: iPhone 16 Plus
+    PREFERRED_DEVICE="2AFF1AEA-9D1C-420E-ACE5-DA10B7493788"
+    
+    if xcrun simctl list devices | grep -q "$PREFERRED_DEVICE"; then
+        print_info "Using iPhone 16 Plus simulator"
+        flutter run -d "$PREFERRED_DEVICE"
+    else
+        print_info "iPhone 16 Plus not found, using booted simulator"
+        DEVICE_ID=$(xcrun simctl list devices | grep "Booted" | head -1 | sed 's/.*(//' | sed 's/).*//')
+        flutter run -d "$DEVICE_ID"
+    fi
 }
 
 # Run on Android

@@ -1,10 +1,18 @@
 @echo off
 REM Gridlock X & O Evolved - Windows Development Script
 REM This script automates: git pull, flutter pub get, build_runner, flutter run
+REM
+REM NOTE: iOS Simulators only work on macOS with Xcode
+REM For iOS development, use run_app.sh on macOS
+REM This script works with:
+REM   - Android emulators (must be started manually)
+REM   - Physical Android devices connected via USB
+REM   - Chrome (for web development)
 
 echo.
 echo ====================================================
 echo  Gridlock X ^& O Evolved - Development Run Script
+echo  Platform: Windows (Android/Web/Physical Devices)
 echo ====================================================
 echo.
 
