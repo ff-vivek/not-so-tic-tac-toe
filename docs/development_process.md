@@ -10,13 +10,13 @@ This document outlines the phased development approach for building Gridlock X &
 - [x] Initialize Flutter project with proper folder structure
 - [x] Set up version control (Git) with branch strategy (main, develop, feature/*)
 - [x] Configure CI/CD pipeline (GitHub Actions / GitLab CI)
-- [ ]Set up development, staging, and production environments
+- [ ] Set up development, staging, and production environments
 - [ ] Configure code quality tools (linting, analysis_options.yaml)
 - [ ] Set up dependency management and version pinning strategy
 
 ### 0.2 Backend Infrastructure (Epic 4 - Foundation)
-- [ ] Choose and set up cloud provider (Firebase)
-- [ ] Set up database (Firestore for real-time)
+- [x] Choose and set up cloud provider (Firebase)
+- [x] Set up database (Firestore for real-time)
 - [ ] Configure authentication service (Firebase Auth / Auth0)
   - Google Sign-In
   - Apple Sign-In

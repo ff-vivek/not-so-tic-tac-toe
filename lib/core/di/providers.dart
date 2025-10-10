@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/auth/auth_manager.dart';
 import 'package:not_so_tic_tac_toe_game/data/matchmaking/firebase_match_repository.dart';
 import 'package:not_so_tic_tac_toe_game/data/matchmaking/firebase_matchmaking_repository.dart';
 import 'package:not_so_tic_tac_toe_game/data/modifiers/stub_modifiers.dart';
@@ -21,17 +22,22 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });
 
+final authManagerProvider = Provider<AuthManager>((ref) {
+  final firebaseAuth = ref.watch(firebaseAuthProvider);
+  return FirebaseAuthManager(firebaseAuth);
+});
+
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
   return FirebaseFirestore.instance;
 });
 
 final playerIdProvider = Provider<String>((ref) {
-  final auth = ref.watch(firebaseAuthProvider);
-  final user = auth.currentUser;
-  if (user == null) {
+  final authManager = ref.watch(authManagerProvider);
+  final userId = authManager.currentUserId;
+  if (userId == null) {
     throw StateError('Player is not authenticated');
   }
-  return user.uid;
+  return userId;
 });
 
 final matchmakingRepositoryProvider = Provider<MatchmakingRepository>((ref) {
