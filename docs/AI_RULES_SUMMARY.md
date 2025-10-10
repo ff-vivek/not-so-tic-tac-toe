@@ -2,15 +2,15 @@
 
 ## 📋 Files Created
 
-### 1. `.cursorrules` (Main Rules File)
+### 1. `.dreamflowrules` (Main Rules File)
 Comprehensive guidelines for AI coding assistants working on this project.
 
-**Location**: Root directory  
+**Location**: docs/dreamflowrules.md
 **Size**: ~17KB  
 **Sections**: 20+ detailed sections covering all aspects of development
 
 ### 2. `.windsurfrules` & `.aidigestorrules`
-Reference files that point to the main `.cursorrules` file for cross-platform compatibility.
+Reference files that point to the main `.dreamflowrules` file for cross-platform compatibility.
 
 ---
 
@@ -148,7 +148,7 @@ Is it 100% clear?
 1. **development_process.md** → Current phase, task list
 2. **tech_prd_1_0.md** → What to build
 3. **tasks_breakdown.md** → How to build it
-4. **.cursorrules** → How to code it
+4. **.dreamflowrules** → How to code it
 
 ---
 

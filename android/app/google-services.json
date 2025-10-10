@@ -1,0 +1,154 @@
+{
+  "project_info": {
+    "project_number": "963076663974",
+    "project_id": "family-hosehold-management-pro",
+    "storage_bucket": "family-hosehold-management-pro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:963076663974:android:f7cadcad1cfa750bdca267",
+        "android_client_info": {
+          "package_name": "com.example.not_so_tic_tac_toe"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3CbdqSF-3V4HanAQ5R2lfrdM-kNl0mi4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "963076663974-au1n5gogd2cp2kr9mr3ta7q54tjk59pj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.CounterApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:963076663974:android:814d179357a5c32fdca267",
+        "android_client_info": {
+          "package_name": "com.mycompany.CounterApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3CbdqSF-3V4HanAQ5R2lfrdM-kNl0mi4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "963076663974-au1n5gogd2cp2kr9mr3ta7q54tjk59pj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.CounterApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:963076663974:android:7b175ba9ba109a66dca267",
+        "android_client_info": {
+          "package_name": "com.mycompany.FamilyHouseholdManagementApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3CbdqSF-3V4HanAQ5R2lfrdM-kNl0mi4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "963076663974-au1n5gogd2cp2kr9mr3ta7q54tjk59pj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.CounterApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:963076663974:android:5bce6aa3e5f0841ddca267",
+        "android_client_info": {
+          "package_name": "com.stringswaytech.quickprompt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3CbdqSF-3V4HanAQ5R2lfrdM-kNl0mi4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "963076663974-idf6l6q3hcivgjpk27m1r5kh7a76s337.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "963076663974-au1n5gogd2cp2kr9mr3ta7q54tjk59pj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.CounterApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

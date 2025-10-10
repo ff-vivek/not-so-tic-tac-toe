@@ -1,0 +1,27 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "family-hosehold-management-pro",
+          "appId": "1:963076663974:android:f7cadcad1cfa750bdca267",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "family-hosehold-management-pro",
+          "configurations": {
+            "android": "1:963076663974:android:f7cadcad1cfa750bdca267",
+            "ios": "1:963076663974:ios:e86d6dd008de51d9dca267",
+            "web": "1:963076663974:web:b468c7e0a6669e19dca267"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
