@@ -86,7 +86,7 @@ See [SCRIPTS.md](SCRIPTS.md) for detailed documentation.
 ## 🤖 AI Development Guidelines
 
 This project includes rules for AI coding assistants (Cursor, Windsurf, etc.):
-- **`dreamflowrules.md`** - Comprehensive development guidelines (6 core rules)
+- **[`docs/dreamflowrules.md`](docs/dreamflowrules.md)** - Comprehensive development guidelines (6 core rules)
 
 **Key Rules for AI Assistants**:
 1. Always reference `docs/development_process.md` for current phase
