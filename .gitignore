@@ -46,3 +46,13 @@ app.*.map.json
 
 *.hologram.dart
 .prompt_attachments
+
+# AI Prompts - TRACKED for auditing
+# .ai-prompts/ folder is intentionally tracked in git
+# These logs are valuable for:
+# - Development auditing
+# - Team knowledge sharing
+# - Cost tracking
+# - Decision documentation
+# If you need to exclude specific sensitive prompts, add them individually:
+# .ai-prompts/2025-XX-XX_XXXX_sensitive-topic.md

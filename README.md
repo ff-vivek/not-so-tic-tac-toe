@@ -50,18 +50,43 @@ flutter test --coverage
 flutter test test/path/to/test_file.dart
 ```
 
+### Development Scripts 🚀
+
+This project includes automated scripts for streamlined development:
+
+**Quick Start (iOS)**:
+```bash
+./run_app.sh
+```
+
+**Enhanced Multi-Platform Script**:
+```bash
+./dev.sh ios          # Run on iOS
+./dev.sh android      # Run on Android
+./dev.sh setup        # First-time setup
+./dev.sh clean        # Clean rebuild
+```
+
+These scripts automatically:
+- Pull latest code from Git
+- Install dependencies (`flutter pub get`)
+- Run build_runner (if needed)
+- Start iOS Simulator or Android Emulator
+- Launch the app with hot reload
+
+See [SCRIPTS.md](SCRIPTS.md) for detailed documentation.
+
 ## 📚 Documentation
 
 - **[Product Requirements Document](docs/tech_prd_1_0.md)** - Full product specification
 - **[Tasks Breakdown](docs/tasks_breakdown.md)** - Epic and user story breakdown
 - **[Development Process](docs/development_process.md)** - Phased development roadmap
+- **[AI Prompts Log](.ai-prompts/README.md)** - AI session logs for auditing
 
 ## 🤖 AI Development Guidelines
 
 This project includes rules for AI coding assistants (Cursor, Windsurf, etc.):
-- **`.cursorrules`** - Comprehensive development guidelines
-- **`.windsurfrules`** - Windsurf-specific rules reference
-- **`.aidigestorrules`** - AI Digestor rules reference
+- **`dreamflowrules.md`** - Comprehensive development guidelines (6 core rules)
 
 **Key Rules for AI Assistants**:
 1. Always reference `docs/development_process.md` for current phase
@@ -69,6 +94,14 @@ This project includes rules for AI coding assistants (Cursor, Windsurf, etc.):
 3. Only implement features defined in PRD and tasks breakdown
 4. Ask for clarification when uncertain
 5. Focus on best UX/UI practices
+6. **Log all AI prompts** in `.ai-prompts/` for auditing
+
+### Prompt Logging 📝
+All AI interactions are logged in `.ai-prompts/` folder:
+- Format: `YYYY-MM-DD_HHMM_description.md`
+- Includes: Full prompt, summary, token usage, files modified
+- Purpose: Auditing, cost tracking, knowledge sharing
+- See [`.ai-prompts/TEMPLATE.md`](.ai-prompts/TEMPLATE.md) for format
 
 ## 🏗️ Architecture
 

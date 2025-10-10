@@ -78,6 +78,117 @@ When you encounter ANY of the following, **STOP and ASK**:
   - Optimized images and assets
   - Efficient state management (no unnecessary rebuilds)
 
+### 6. **Prompt Logging & Auditing** 🔍
+- **MANDATORY**: All AI prompts must be logged for auditing and review purposes
+- **What to Log**: Every interaction with AI coding assistants
+  
+**Logging Requirements**:
+- Create a dedicated folder: `.ai-prompts/` in project root
+- Save each prompt session as a separate markdown file
+- File naming format: `YYYY-MM-DD_HHMM_[brief-description].md`
+  - Example: `2025-10-10_1430_setup-development-scripts.md`
+  - Example: `2025-10-10_1545_implement-game-logic.md`
+  
+**File Structure**:
+```markdown
+# Prompt Log: [Brief Description]
+
+**Date**: YYYY-MM-DD
+**Time**: HH:MM (24-hour format)
+**Session Duration**: [duration] minutes
+**Phase**: [Current Phase from development_process.md]
+
+---
+
+## 📊 Token Usage
+
+- **Input Tokens**: [number]
+- **Output Tokens**: [number]
+- **Total Tokens**: [number]
+- **Estimated Cost**: $[amount] (if applicable)
+
+---
+
+## 📝 Prompt Summary
+
+[2-3 sentence summary of what was requested]
+
+---
+
+## 🎯 Goals
+
+- [ ] Goal 1
+- [ ] Goal 2
+- [ ] Goal 3
+
+---
+
+## 💬 Full Prompt
+
+```
+[Complete original prompt text]
+```
+
+---
+
+## 📤 AI Response Summary
+
+[Brief summary of what the AI did/created]
+
+**Files Created/Modified**:
+- `path/to/file1.dart` - [description]
+- `path/to/file2.dart` - [description]
+
+**Tasks Completed**:
+- [x] Task 1
+- [x] Task 2
+
+---
+
+## 🔄 Development Process Updates
+
+**Checkboxes marked complete**:
+- Phase X, Section Y: [task name]
+
+---
+
+## 📌 Notes & Follow-ups
+
+- Note 1
+- Follow-up needed: [description]
+
+---
+
+## 🏷️ Tags
+
+`[phase-0]` `[setup]` `[scripts]` `[documentation]`
+```
+
+**Best Practices**:
+- Log immediately after AI session completes
+- Be descriptive in file names (max 50 chars after timestamp)
+- Update summary section before closing session
+- Include actual token counts from AI response
+- Tag with relevant phase and topics
+- Link related prompt logs if multi-session work
+
+**Folder Structure**:
+```
+.ai-prompts/
+├── 2025-10-10_1200_initial-setup.md
+├── 2025-10-10_1430_development-scripts.md
+├── 2025-10-11_0900_game-architecture.md
+└── README.md (index of all prompts)
+```
+
+**Why This Matters**:
+- 📊 Track AI usage and costs
+- 🔍 Audit development decisions
+- 📚 Learn from past sessions
+- 🎯 Understand feature evolution
+- 💰 Budget management
+- 🧠 Knowledge transfer to team
+
 ---
 
 ## 🏗️ Technical Implementation Standards
