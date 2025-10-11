@@ -20,14 +20,16 @@ dev_dependencies:
     sdk: flutter
 
 flutter:
+  assets:
+    - assets/fonts/
   fonts:
     - family: NotoSans
       fonts:
-        - asset: fonts/NotoSans-Regular.ttf
-        - asset: fonts/NotoSans-Bold.ttf
+        - asset: assets/fonts/NotoSans-Regular.ttf
+        - asset: assets/fonts/NotoSans-Bold.ttf
           weight: 700
-        - asset: fonts/NotoSans-Italic.ttf
+        - asset: assets/fonts/NotoSans-Italic.ttf
           style: italic
-        - asset: fonts/NotoSans-BoldItalic.ttf
+        - asset: assets/fonts/NotoSans-BoldItalic.ttf
           weight: 700
           style: italic
