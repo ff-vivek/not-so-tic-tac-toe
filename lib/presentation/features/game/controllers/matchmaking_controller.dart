@@ -7,7 +7,7 @@ import 'package:not_so_tic_tac_toe_game/domain/value_objects/match_join_result.d
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
 
-enum MatchmakingPhase { idle, searching, matchReady, error }
+enum MatchmakingPhase { idle, searching, connecting, matchReady, error }
 
 class MatchmakingState {
   const MatchmakingState({
@@ -21,21 +21,33 @@ class MatchmakingState {
   const MatchmakingState.searching()
       : this(phase: MatchmakingPhase.searching);
 
+  const MatchmakingState.connecting(String matchId)
+      : this(
+          phase: MatchmakingPhase.connecting,
+          assignedMatchId: matchId,
+        );
+
   final MatchmakingPhase phase;
   final String? assignedMatchId;
   final String? errorMessage;
 
   MatchmakingState copyWith({
     MatchmakingPhase? phase,
-    String? assignedMatchId,
-    String? errorMessage,
+    Object? assignedMatchId = _sentinel,
+    Object? errorMessage = _sentinel,
   }) {
     return MatchmakingState(
       phase: phase ?? this.phase,
-      assignedMatchId: assignedMatchId ?? this.assignedMatchId,
-      errorMessage: errorMessage ?? this.errorMessage,
+      assignedMatchId: identical(assignedMatchId, _sentinel)
+          ? this.assignedMatchId
+          : assignedMatchId as String?,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
     );
   }
+
+  static const _sentinel = Object();
 }
 
 class MatchmakingController extends Notifier<MatchmakingState> {
@@ -73,7 +85,10 @@ class MatchmakingController extends Notifier<MatchmakingState> {
   }
 
   Future<void> startSearch() async {
-    if (state.phase == MatchmakingPhase.searching) return;
+    if (state.phase == MatchmakingPhase.searching ||
+        state.phase == MatchmakingPhase.connecting) {
+      return;
+    }
 
     state = const MatchmakingState.searching();
 
@@ -81,10 +96,10 @@ class MatchmakingController extends Notifier<MatchmakingState> {
       final result = await _repository.joinQueue(_playerId);
       if (result.status == MatchJoinStatus.matchReady ||
           result.status == MatchJoinStatus.alreadyInMatch) {
-        state = state.copyWith(
-          phase: MatchmakingPhase.matchReady,
-          assignedMatchId: result.matchId,
-        );
+        final matchId = result.matchId;
+        if (matchId != null) {
+          state = MatchmakingState.connecting(matchId);
+        }
       }
     } catch (error) {
       state = MatchmakingState(

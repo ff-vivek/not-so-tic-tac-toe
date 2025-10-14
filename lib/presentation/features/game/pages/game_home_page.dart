@@ -35,17 +35,34 @@ class GameHomePage extends ConsumerWidget {
               );
             }
 
-            if (matchmakingState.phase == MatchmakingPhase.searching) {
-              return const _SearchingView();
+            switch (matchmakingState.phase) {
+              case MatchmakingPhase.searching:
+                return const _SearchingView();
+              case MatchmakingPhase.connecting:
+                return _ConnectingView(
+                  opponentMatchId: matchmakingState.assignedMatchId,
+                );
+              case MatchmakingPhase.error:
+                return _ErrorView(message: matchmakingState.errorMessage);
+              case MatchmakingPhase.matchReady:
+              case MatchmakingPhase.idle:
+                return const _IdleView();
             }
-
-            if (matchmakingState.phase == MatchmakingPhase.error) {
-              return _ErrorView(message: matchmakingState.errorMessage);
-            }
-
-            return const _IdleView();
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () {
+            switch (matchmakingState.phase) {
+              case MatchmakingPhase.connecting:
+                return _ConnectingView(
+                  opponentMatchId: matchmakingState.assignedMatchId,
+                );
+              case MatchmakingPhase.searching:
+                return const _SearchingView();
+              case MatchmakingPhase.error:
+              case MatchmakingPhase.matchReady:
+              case MatchmakingPhase.idle:
+                return const Center(child: CircularProgressIndicator());
+            }
+          },
           error: (error, _) => _ErrorView(message: error.toString()),
         ),
       ),
@@ -118,6 +135,67 @@ class _SearchingView extends ConsumerWidget {
   }
 }
 
+class _ConnectingView extends StatelessWidget {
+  const _ConnectingView({this.opponentMatchId});
+
+  final String? opponentMatchId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 64,
+            height: 64,
+            child: Stack(
+              alignment: Alignment.center,
+              children: const [
+                CircularProgressIndicator(strokeWidth: 6),
+                Icon(Icons.groups_rounded, size: 28),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Opponent locked in!',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Setting the board - you'll be dropped into the match shortly.",
+            style: theme.textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          if (opponentMatchId != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Match ID ${opponentMatchId!}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          Tooltip(
+            message: 'Matches are already syncing, so cancelling now could orphan the lobby.',
+            triggerMode: TooltipTriggerMode.tap,
+            child: OutlinedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.hourglass_bottom_rounded),
+              label: const Text('Preparing match...'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ErrorView extends ConsumerWidget {
   const _ErrorView({required this.message});
 
@@ -169,6 +247,8 @@ class _MatchView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final matchRepository = ref.read(matchRepositoryProvider);
     final playerMark = match.markForPlayer(playerId);
+    final matchmakingController = ref.read(matchmakingControllerProvider.notifier);
+    final isGameComplete = match.game.status != GameStatus.inProgress;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -176,6 +256,33 @@ class _MatchView extends ConsumerWidget {
         GameStatusBanner(
           gameState: match.game,
           localPlayerMark: playerMark,
+          onLeave: isGameComplete
+              ? null
+              : () => _confirmLeaveMatch(
+                    context,
+                    matchRepository,
+                    match.id,
+                    playerId,
+                  ),
+          onReturnToMenu: isGameComplete
+              ? () => _finishMatch(
+                    context,
+                    matchRepository,
+                    match.id,
+                    playerId,
+                  )
+              : null,
+          onPlayAgain: isGameComplete
+              ? () async {
+                  await _finishMatch(
+                    context,
+                    matchRepository,
+                    match.id,
+                    playerId,
+                  );
+                  await matchmakingController.startSearch();
+                }
+              : null,
         ),
         const SizedBox(height: 24),
         Expanded(
@@ -188,38 +295,13 @@ class _MatchView extends ConsumerWidget {
               playerId,
               position,
             ),
+            localPlayerMark: playerMark,
             canSelectCell: (position) {
               if (!match.isPlayerTurn(playerId)) return false;
               return match.game.canPlayAt(position);
             },
           ),
         ),
-        const SizedBox(height: 24),
-        if (match.game.status == GameStatus.inProgress)
-          OutlinedButton(
-            onPressed: () => _confirmLeaveMatch(
-              context,
-              matchRepository,
-              match.id,
-              playerId,
-            ),
-            child: const Text('Leave Match'),
-          )
-        else ...[
-          FilledButton(
-            onPressed: () => _finishMatch(context, matchRepository, match.id, playerId),
-            child: const Text('Return to Menu'),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () async {
-              await _finishMatch(context, matchRepository, match.id, playerId);
-              await ref.read(matchmakingControllerProvider.notifier).startSearch();
-            },
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Play Again'),
-          ),
-        ],
       ],
     );
   }
