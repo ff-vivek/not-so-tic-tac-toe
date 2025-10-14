@@ -14,12 +14,20 @@ class TicTacToeBoard extends StatelessWidget {
     required this.onCellSelected,
     this.canSelectCell,
     this.localPlayerMark,
+    this.blockedPositions = const {},
+    this.spinnerOptions = const [],
+    this.isSpinnerActive = false,
+    this.isSpinnerTurnForLocalPlayer = false,
   });
 
   final TicTacToeGame game;
   final CellSelected onCellSelected;
   final CanSelectCell? canSelectCell;
   final PlayerMark? localPlayerMark;
+  final Set<BoardPosition> blockedPositions;
+  final List<BoardPosition> spinnerOptions;
+  final bool isSpinnerActive;
+  final bool isSpinnerTurnForLocalPlayer;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +36,7 @@ class TicTacToeBoard extends StatelessWidget {
 
     final board = game.board;
     final overlayDetails = _overlayDetails(theme);
+    final spinnerSet = spinnerOptions.toSet();
 
     return Center(
       child: AspectRatio(
@@ -62,6 +71,10 @@ class TicTacToeBoard extends StatelessWidget {
                         onTap: () => onCellSelected(position),
                         isInteractive: predicate(position),
                         theme: theme,
+                        isBlocked: blockedPositions.contains(position),
+                        isSpinnerOption: spinnerSet.contains(position),
+                        spinnerActive: isSpinnerActive,
+                        emphasizeSpinner: isSpinnerTurnForLocalPlayer,
                       );
                     },
                   ),
@@ -138,6 +151,10 @@ class _BoardCell extends StatelessWidget {
     required this.onTap,
     required this.isInteractive,
     required this.theme,
+    required this.isBlocked,
+    required this.isSpinnerOption,
+    required this.spinnerActive,
+    required this.emphasizeSpinner,
   });
 
   final PlayerMark? mark;
@@ -145,44 +162,171 @@ class _BoardCell extends StatelessWidget {
   final VoidCallback onTap;
   final bool isInteractive;
   final ThemeData theme;
+  final bool isBlocked;
+  final bool isSpinnerOption;
+  final bool spinnerActive;
+  final bool emphasizeSpinner;
 
   @override
   Widget build(BuildContext context) {
     final borderColor = theme.colorScheme.primary.withOpacity(0.3);
     final highlightColor = theme.colorScheme.secondary.withOpacity(0.15);
+    final blockedColor = theme.colorScheme.surfaceVariant.withOpacity(0.85);
+    final baseColor = isBlocked
+        ? blockedColor
+        : isHighlighted
+            ? highlightColor
+            : Colors.white;
+
+    final semanticsHint = isBlocked
+        ? 'Blocked square'
+        : mark == null
+            ? spinnerActive && !isSpinnerOption
+                ? 'Unavailable this turn'
+                : 'Tap to place your mark'
+            : 'Occupied by ${mark!.name}';
 
     return Semantics(
       label: 'Board cell',
-      hint: mark == null ? 'Tap to place your mark' : 'Occupied by ${mark!.name}',
+      hint: semanticsHint,
       button: isInteractive,
       child: Material(
-        color: isHighlighted ? highlightColor : Colors.white,
+        color: baseColor,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: isInteractive ? onTap : null,
           borderRadius: BorderRadius.circular(16),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: borderColor, width: 2),
-            ),
-            alignment: Alignment.center,
-            child: AnimatedScale(
-              scale: mark == null ? 0 : 1,
-              duration: const Duration(milliseconds: 160),
-              child: Text(
-                mark?.label ?? '',
-                style: theme.textTheme.displayMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: mark == PlayerMark.x
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.secondary,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (spinnerActive && isSpinnerOption)
+                IgnorePointer(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: _SpinnerPulse(
+                      color: emphasizeSpinner
+                          ? theme.colorScheme.secondary
+                          : theme.colorScheme.tertiary,
+                      emphasize: emphasizeSpinner,
+                    ),
+                  ),
+                ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: spinnerActive && isSpinnerOption
+                        ? theme.colorScheme.secondary.withOpacity(0.65)
+                        : borderColor,
+                    width: spinnerActive && isSpinnerOption ? 2.6 : 2,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: AnimatedScale(
+                  scale: mark == null ? 0 : 1,
+                  duration: const Duration(milliseconds: 160),
+                  child: Text(
+                    mark?.label ?? '',
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: mark == PlayerMark.x
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.secondary,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              if (isBlocked)
+                const _BlockedOverlay(),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BlockedOverlay extends StatelessWidget {
+  const _BlockedOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.9),
+        border: Border.all(
+          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.block,
+        size: 30,
+        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+      ),
+    );
+  }
+}
+
+class _SpinnerPulse extends StatefulWidget {
+  const _SpinnerPulse({required this.color, required this.emphasize});
+
+  final Color color;
+  final bool emphasize;
+
+  @override
+  State<_SpinnerPulse> createState() => _SpinnerPulseState();
+}
+
+class _SpinnerPulseState extends State<_SpinnerPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    duration: widget.emphasize
+        ? const Duration(milliseconds: 900)
+        : const Duration(milliseconds: 1400),
+    vsync: this,
+  )..repeat(reverse: true);
+
+  @override
+  void didUpdateWidget(covariant _SpinnerPulse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.emphasize != widget.emphasize) {
+      _controller.duration = widget.emphasize
+          ? const Duration(milliseconds: 900)
+          : const Duration(milliseconds: 1400);
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final eased = Curves.easeInOut.transform(_controller.value);
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: widget.color.withOpacity(0.18 + 0.12 * eased),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withOpacity(0.35 + 0.35 * eased),
+                blurRadius: 18 + 12 * eased,
+                spreadRadius: 1.5 + 1.8 * eased,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

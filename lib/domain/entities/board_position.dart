@@ -1,14 +1,19 @@
 class BoardPosition {
-  BoardPosition({required this.row, required this.col}) {
-    if (row < 0 || row > 2 || col < 0 || col > 2) {
-      throw ArgumentError('BoardPosition must be within 0-2 for both row and col');
-    }
-  }
+  const BoardPosition({required this.row, required this.col}) : assert(row < 0 || row > 2 || col < 0 || col > 2,'BoardPosition must be within 0-2 for both row and col');
 
   final int row;
   final int col;
 
   int get index => row * 3 + col;
+
+  factory BoardPosition.fromIndex(int index) {
+    if (index < 0 || index > 8) {
+      throw ArgumentError('BoardPosition index must be between 0 and 8.');
+    }
+    final row = index ~/ 3;
+    final col = index % 3;
+    return BoardPosition(row: row, col: col);
+  }
 
   @override
   int get hashCode => Object.hash(row, col);

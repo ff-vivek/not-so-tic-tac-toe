@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/board_position.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart';
@@ -5,12 +7,15 @@ import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
 import 'package:not_so_tic_tac_toe_game/domain/exceptions/invalid_move_exception.dart';
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart';
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_algorithms.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/match_repository.dart';
 
 class FirebaseMatchRepository implements MatchRepository {
-  FirebaseMatchRepository(this._firestore);
+  FirebaseMatchRepository(this._firestore) : _random = Random();
 
   final FirebaseFirestore _firestore;
+  final Random _random;
 
   CollectionReference<Map<String, dynamic>> get _matchesCollection =>
       _firestore.collection('matches');
@@ -65,6 +70,11 @@ class FirebaseMatchRepository implements MatchRepository {
 
       final playerXId = data['playerXId'] as String;
       final playerOId = data['playerOId'] as String;
+      final modifierId = data['modifierId'] as String?;
+      final modifierState =
+          (data['modifierState'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+      final blockedSquareIndices = _readIntList(modifierState['blockedSquares']);
+      final spinnerChoiceIndices = _readIntList(modifierState['spinnerChoices']);
 
       final activeMarkString = data['activeMark'] as String? ?? 'x';
       final startingMarkString = data['startingMark'] as String? ?? 'x';
@@ -87,8 +97,18 @@ class FirebaseMatchRepository implements MatchRepository {
         startingPlayer: _markFromString(startingMarkString) ?? PlayerMark.x,
       );
 
+      if (blockedSquareIndices.contains(position.index)) {
+        throw InvalidMoveException('That square is locked by the modifier.');
+      }
+
       if (!currentGame.canPlayAt(position)) {
         throw InvalidMoveException('Selected cell is not available');
+      }
+
+      if (modifierId == 'spinner' &&
+          spinnerChoiceIndices.isNotEmpty &&
+          !spinnerChoiceIndices.contains(position.index)) {
+        throw InvalidMoveException('Select one of the spinner-highlighted squares.');
       }
 
       final updatedGame = currentGame.playMove(position);
@@ -140,6 +160,13 @@ class FirebaseMatchRepository implements MatchRepository {
           'participantIds': [playerXId, playerOId],
           'ratingDelta': updates['ratingDelta'],
         };
+      }
+
+      if (modifierId == 'spinner') {
+        final nextChoices = updatedGame.status == GameStatus.inProgress
+            ? generateSpinnerChoices(random: _random, board: updatedGame.board)
+            : const <int>[];
+        updates['modifierState.spinnerChoices'] = nextChoices;
       }
 
       transaction.update(matchRef, updates);
@@ -199,8 +226,6 @@ class FirebaseMatchRepository implements MatchRepository {
           'status': 'won',
           'winnerMark': winningMark,
           'winnerPlayerId': opponentId,
-          'activePlayerId': null,
-          'activeMark': winningMark,
           'completedAt': FieldValue.serverTimestamp(),
           'outcome': outcomePayload,
           'ratingDelta': _ratingDeltaStub(
@@ -290,6 +315,19 @@ class FirebaseMatchRepository implements MatchRepository {
 
     final createdAt = _readTimestamp(data['createdAt']);
     final updatedAt = _readTimestamp(data['updatedAt']);
+    final modifierCategory = ModifierCategory.fromStorage(
+      data['modifierCategory'] as String?,
+    );
+    final modifierId = data['modifierId'] as String?;
+    final modifierState =
+        (data['modifierState'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final blockedSquares = _readIntList(modifierState['blockedSquares'])
+        .map(BoardPosition.fromIndex)
+        .toSet();
+    final spinnerChoices = _readIntList(modifierState['spinnerChoices'])
+        .map(BoardPosition.fromIndex)
+        .toList();
+    spinnerChoices.sort((a, b) => a.index.compareTo(b.index));
 
     final game = TicTacToeGame.fromState(
       board: _decodeBoard(boardRaw),
@@ -324,7 +362,20 @@ class FirebaseMatchRepository implements MatchRepository {
       playerStates: playerStates,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      modifierCategory: modifierCategory,
+      modifierId: modifierId,
+      blockedPositions: blockedSquares,
+      spinnerOptions: spinnerChoices,
     );
+  }
+
+  List<int> _readIntList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((element) => element is int ? element : (element as num).toInt())
+          .toList(growable: false);
+    }
+    return const [];
   }
 
   List<PlayerMark?> _decodeBoard(List<dynamic> board) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart';
 
 class GameStatusBanner extends StatelessWidget {
   const GameStatusBanner({
@@ -11,6 +12,8 @@ class GameStatusBanner extends StatelessWidget {
     this.onPlayAgain,
     this.onReturnToMenu,
     this.onLeave,
+    this.activeModifierCategory,
+    this.activeModifierId,
   });
 
   final TicTacToeGame gameState;
@@ -18,6 +21,8 @@ class GameStatusBanner extends StatelessWidget {
   final VoidCallback? onPlayAgain;
   final VoidCallback? onReturnToMenu;
   final VoidCallback? onLeave;
+  final ModifierCategory? activeModifierCategory;
+  final String? activeModifierId;
 
   @override
   Widget build(BuildContext context) {
@@ -50,12 +55,11 @@ class GameStatusBanner extends StatelessWidget {
       case GameStatus.inProgress:
         final isLocalTurn =
             localPlayerMark != null && gameState.activePlayer == localPlayerMark;
+        final subtitleLines = _inProgressSubtitleLines(isLocalTurn);
         return _StatusDetails(
           statusKey: 'progress-${gameState.activePlayer.name}',
           title: isLocalTurn ? 'Your Move' : '${_playerLabel(gameState.activePlayer)} to play',
-          subtitle: isLocalTurn
-              ? 'Select an open square to play.'
-              : 'Waiting for your opponent to move.',
+          subtitle: subtitleLines.join('\n'),
           color: theme.colorScheme.primary,
           icon: isLocalTurn ? Icons.touch_app_rounded : Icons.hourglass_bottom_rounded,
         );
@@ -82,6 +86,40 @@ class GameStatusBanner extends StatelessWidget {
           icon: Icons.handshake_rounded,
         );
     }
+  }
+
+  List<String> _inProgressSubtitleLines(bool isLocalTurn) {
+    final lines = <String>[];
+    final baseLine = isLocalTurn
+        ? 'Select an open square to play.'
+        : 'Waiting for your opponent to move.';
+
+    if (activeModifierCategory == null) {
+      return [baseLine];
+    }
+
+    lines.add('Mode: ${activeModifierCategory!.displayName}');
+
+    switch (activeModifierId) {
+      case 'blocked_squares':
+        lines.add('Locked squares are off-limits this round.');
+        break;
+      case 'spinner':
+        lines.add(
+          isLocalTurn
+              ? 'Choose one of the highlighted squares this turn.'
+              : 'Opponent must choose a highlighted square.',
+        );
+        break;
+      default:
+        if (activeModifierCategory != null) {
+          lines.add(activeModifierCategory!.tagline);
+        }
+        break;
+    }
+
+    lines.add(baseLine);
+    return lines;
   }
 
   List<Widget> _buildActions(BuildContext context) {

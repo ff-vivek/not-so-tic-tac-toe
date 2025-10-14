@@ -6,10 +6,12 @@ import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/match_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/matchmaking_controller.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/game_status_banner.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/tic_tac_toe_board.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/modifier_category_reveal.dart';
 
 class GameHomePage extends ConsumerWidget {
   const GameHomePage({super.key});
@@ -237,63 +239,150 @@ class _ErrorView extends ConsumerWidget {
   }
 }
 
-class _MatchView extends ConsumerWidget {
+class _MatchView extends ConsumerStatefulWidget {
   const _MatchView({required this.match, required this.playerId});
 
   final MatchState match;
   final String playerId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MatchView> createState() => _MatchViewState();
+}
+
+class _MatchViewState extends ConsumerState<_MatchView> {
+  bool _categoryRevealComplete = true;
+  String? _revealSignature;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetRevealState();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MatchView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _resetRevealState(forceSetState: true);
+  }
+
+  void _resetRevealState({bool forceSetState = false}) {
+    final category = widget.match.modifierCategory;
+    final signature =
+        category == null ? null : '${widget.match.id}-${category.storageValue}';
+
+    if (_revealSignature == signature) {
+      return;
+    }
+
+    void updater() {
+      _revealSignature = signature;
+      _categoryRevealComplete = category == null;
+    }
+
+    if (forceSetState) {
+      setState(updater);
+    } else {
+      updater();
+    }
+  }
+
+  void _handleRevealComplete() {
+    if (!_categoryRevealComplete) {
+      setState(() {
+        _categoryRevealComplete = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final matchRepository = ref.read(matchRepositoryProvider);
-    final playerMark = match.markForPlayer(playerId);
+    final playerMark = widget.match.markForPlayer(widget.playerId);
     final matchmakingController = ref.read(matchmakingControllerProvider.notifier);
-    final isGameComplete = match.game.status != GameStatus.inProgress;
+    final isGameComplete = widget.match.game.status != GameStatus.inProgress;
+    final ModifierCategory? modifierCategory = widget.match.modifierCategory;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         GameStatusBanner(
-          gameState: match.game,
+          gameState: widget.match.game,
           localPlayerMark: playerMark,
+          activeModifierCategory:
+              _categoryRevealComplete ? modifierCategory : null,
+          activeModifierId: widget.match.modifierId,
           onLeave: isGameComplete
               ? null
               : () => _confirmLeaveMatch(
                     context,
                     matchmakingController,
-                    match.id,
+                    widget.match.id,
                   ),
           onReturnToMenu: isGameComplete
               ? () => _leaveMatch(
                     context,
                     matchmakingController,
-                    match.id,
+                    widget.match.id,
                   )
               : null,
           onPlayAgain: isGameComplete
               ? () => _playAgain(
                     context,
                     matchmakingController,
-                    match.id,
+                    widget.match.id,
                   )
               : null,
         ),
+        if (modifierCategory != null) ...[
+          const SizedBox(height: 16),
+          ModifierCategoryReveal(
+            key: ValueKey(_revealSignature),
+            category: modifierCategory,
+            onRevealComplete: _handleRevealComplete,
+          ),
+        ],
         const SizedBox(height: 24),
         Expanded(
-          child: TicTacToeBoard(
-            game: match.game,
-            onCellSelected: (position) => _playMove(
-              context,
-              matchRepository,
-              match.id,
-              playerId,
-              position,
-            ),
-            localPlayerMark: playerMark,
-            canSelectCell: (position) {
-              if (!match.isPlayerTurn(playerId)) return false;
-              return match.game.canPlayAt(position);
-            },
+          child: Stack(
+            children: [
+              AnimatedOpacity(
+                opacity: _categoryRevealComplete ? 1 : 0.15,
+                duration: const Duration(milliseconds: 250),
+                child: IgnorePointer(
+                  ignoring: !_categoryRevealComplete,
+                  child: TicTacToeBoard(
+                    game: widget.match.game,
+                    onCellSelected: (position) => _playMove(
+                      context,
+                      matchRepository,
+                      widget.match.id,
+                      widget.playerId,
+                      position,
+                    ),
+                    localPlayerMark: playerMark,
+                    canSelectCell: (position) {
+                      if (!_categoryRevealComplete) return false;
+                      return widget.match.canPlayerSelectCell(
+                        widget.playerId,
+                        position,
+                      );
+                    },
+                    blockedPositions: widget.match.blockedPositions,
+                    spinnerOptions: widget.match.spinnerOptions,
+                    isSpinnerActive: _categoryRevealComplete &&
+                        widget.match.modifierId == 'spinner' &&
+                        widget.match.spinnerOptions.isNotEmpty &&
+                        widget.match.game.status == GameStatus.inProgress,
+                    isSpinnerTurnForLocalPlayer: _categoryRevealComplete &&
+                        widget.match.modifierId == 'spinner' &&
+                        widget.match.spinnerOptions.isNotEmpty &&
+                        widget.match.isPlayerTurn(widget.playerId),
+                  ),
+                ),
+              ),
+              if (!_categoryRevealComplete)
+                const Positioned.fill(child: _MatchIntroShield()),
+            ],
           ),
         ),
       ],
@@ -378,5 +467,45 @@ class _MatchView extends ConsumerWidget {
         SnackBar(content: Text(error.toString())),
       );
     }
+  }
+}
+
+class _MatchIntroShield extends StatelessWidget {
+  const _MatchIntroShield();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.94),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(
+            'Selecting game mode...',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Hang tight while we lock in a twist for this round.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 }

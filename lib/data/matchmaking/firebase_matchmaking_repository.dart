@@ -1,6 +1,9 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_algorithms.dart';
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/matchmaking_repository.dart';
 import 'package:not_so_tic_tac_toe_game/domain/value_objects/match_join_result.dart';
 
@@ -49,6 +52,9 @@ class FirebaseMatchmakingRepository implements MatchmakingRepository {
       final playerXId = assignCurrentAsX ? playerId : waitingPlayerId;
       final playerOId = assignCurrentAsX ? waitingPlayerId : playerId;
       final timestamp = FieldValue.serverTimestamp();
+      final selectedCategory =
+          ModifierCategory.values[_random.nextInt(ModifierCategory.values.length)];
+      final modifierInfo = _selectModifierForCategory(selectedCategory);
 
       transaction.set(matchRef, {
         'playerXId': playerXId,
@@ -64,7 +70,9 @@ class FirebaseMatchmakingRepository implements MatchmakingRepository {
         'lastMoveIndex': null,
         'createdAt': timestamp,
         'updatedAt': timestamp,
-        'modifierId': 'noop',
+        'modifierId': modifierInfo.id,
+        'modifierCategory': selectedCategory.storageValue,
+        'modifierState': modifierInfo.state,
         'playerStates': {
           playerXId: 'active',
           playerOId: 'active',
@@ -103,4 +111,35 @@ class FirebaseMatchmakingRepository implements MatchmakingRepository {
       }
     });
   }
+
+  _ModifierInfo _selectModifierForCategory(ModifierCategory category) {
+    switch (category) {
+      case ModifierCategory.handYoureDealt:
+        final blockedSquares = generateBlockedSquares(_random);
+        return _ModifierInfo(
+          id: 'blocked_squares',
+          state: {
+            'blockedSquares': blockedSquares,
+          },
+        );
+      case ModifierCategory.forcedMoves:
+        final spinnerChoices = generateSpinnerChoices(
+          random: _random,
+          board: List<PlayerMark?>.filled(9, null),
+        );
+        return _ModifierInfo(
+          id: 'spinner',
+          state: {
+            'spinnerChoices': spinnerChoices,
+          },
+        );
+    }
+  }
+}
+
+class _ModifierInfo {
+  _ModifierInfo({required this.id, required this.state});
+
+  final String id;
+  final Map<String, dynamic> state;
 }
