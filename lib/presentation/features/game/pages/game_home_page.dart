@@ -260,28 +260,22 @@ class _MatchView extends ConsumerWidget {
               ? null
               : () => _confirmLeaveMatch(
                     context,
-                    matchRepository,
+                    matchmakingController,
                     match.id,
-                    playerId,
                   ),
           onReturnToMenu: isGameComplete
-              ? () => _finishMatch(
+              ? () => _leaveMatch(
                     context,
-                    matchRepository,
+                    matchmakingController,
                     match.id,
-                    playerId,
                   )
               : null,
           onPlayAgain: isGameComplete
-              ? () async {
-                  await _finishMatch(
+              ? () => _playAgain(
                     context,
-                    matchRepository,
+                    matchmakingController,
                     match.id,
-                    playerId,
-                  );
-                  await matchmakingController.startSearch();
-                }
+                  )
               : null,
         ),
         const SizedBox(height: 24),
@@ -328,9 +322,8 @@ class _MatchView extends ConsumerWidget {
 
   Future<void> _confirmLeaveMatch(
     BuildContext context,
-    MatchRepository repository,
+    MatchmakingController controller,
     String matchId,
-    String playerId,
   ) async {
     final shouldLeave = await showDialog<bool>(
       context: context,
@@ -355,18 +348,31 @@ class _MatchView extends ConsumerWidget {
     );
 
     if (shouldLeave == true) {
-      await _finishMatch(context, repository, matchId, playerId);
+      await _leaveMatch(context, controller, matchId);
     }
   }
 
-  Future<void> _finishMatch(
+  Future<void> _leaveMatch(
     BuildContext context,
-    MatchRepository repository,
+    MatchmakingController controller,
     String matchId,
-    String playerId,
   ) async {
     try {
-      await repository.leaveMatch(matchId: matchId, playerId: playerId);
+      await controller.leaveMatch(matchId);
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  Future<void> _playAgain(
+    BuildContext context,
+    MatchmakingController controller,
+    String matchId,
+  ) async {
+    try {
+      await controller.playAgain(matchId);
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString())),

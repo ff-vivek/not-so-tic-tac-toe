@@ -56,6 +56,8 @@ class MatchmakingController extends Notifier<MatchmakingState> {
 
   String get _playerId => ref.read(playerIdProvider);
 
+  int _operationToken = 0;
+
   @override
   MatchmakingState build() {
     ref.listen<AsyncValue<MatchState?>>(
@@ -90,18 +92,27 @@ class MatchmakingController extends Notifier<MatchmakingState> {
       return;
     }
 
+    final currentToken = ++_operationToken;
     state = const MatchmakingState.searching();
 
     try {
       final result = await _repository.joinQueue(_playerId);
-      if (result.status == MatchJoinStatus.matchReady ||
-          result.status == MatchJoinStatus.alreadyInMatch) {
-        final matchId = result.matchId;
-        if (matchId != null) {
-          state = MatchmakingState.connecting(matchId);
-        }
+      if (currentToken != _operationToken) return;
+
+      switch (result.status) {
+        case MatchJoinStatus.waiting:
+          state = const MatchmakingState.searching();
+          break;
+        case MatchJoinStatus.matchReady:
+        case MatchJoinStatus.alreadyInMatch:
+          final matchId = result.matchId;
+          if (matchId != null) {
+            state = MatchmakingState.connecting(matchId);
+          }
+          break;
       }
     } catch (error) {
+      if (currentToken != _operationToken) return;
       state = MatchmakingState(
         phase: MatchmakingPhase.error,
         errorMessage: error.toString(),
@@ -112,13 +123,37 @@ class MatchmakingController extends Notifier<MatchmakingState> {
   Future<void> cancelSearch() async {
     if (state.phase != MatchmakingPhase.searching) return;
 
+    final currentToken = ++_operationToken;
+    state = const MatchmakingState.idle();
+
     try {
       await _repository.leaveQueue(_playerId);
     } finally {
+      if (currentToken == _operationToken) {
+        state = const MatchmakingState.idle();
+      }
+    }
+  }
+
+  Future<void> leaveMatch(String matchId) async {
+    final matchRepository = ref.read(matchRepositoryProvider);
+
+    final currentToken = ++_operationToken;
+    await matchRepository.leaveMatch(
+      matchId: matchId,
+      playerId: _playerId,
+    );
+
+    ref.invalidate(activeMatchProvider);
+    if (currentToken == _operationToken) {
       state = const MatchmakingState.idle();
     }
   }
 
+  Future<void> playAgain(String matchId) async {
+    await leaveMatch(matchId);
+    await startSearch();
+  }
 }
 
 final matchmakingControllerProvider =

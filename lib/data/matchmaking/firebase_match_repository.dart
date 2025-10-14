@@ -34,6 +34,7 @@ class FirebaseMatchRepository implements MatchRepository {
     required BoardPosition position,
   }) async {
     final matchRef = _matchesCollection.doc(matchId);
+    Map<String, dynamic>? analyticsEvent;
 
     await _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(matchRef);
@@ -69,6 +70,7 @@ class FirebaseMatchRepository implements MatchRepository {
       final startingMarkString = data['startingMark'] as String? ?? 'x';
       final winnerMarkString = data['winnerMark'] as String?;
       final lastMoveIndex = data['lastMoveIndex'] as int?;
+      final existingOutcome = data['outcome'] as Map<String, dynamic>?;
 
       final boardRaw = (data['board'] as List<dynamic>? ?? List<dynamic>.filled(9, null))
           .cast<dynamic>()
@@ -94,20 +96,58 @@ class FirebaseMatchRepository implements MatchRepository {
       final nextActivePlayerId = updatedGame.status == GameStatus.inProgress
           ? (updatedGame.activePlayer == PlayerMark.x ? playerXId : playerOId)
           : null;
+      final winnerPlayerId = updatedGame.winner == null
+          ? null
+          : (updatedGame.winner == PlayerMark.x ? playerXId : playerOId);
 
-      transaction.update(matchRef, {
+      final updates = <String, dynamic>{
         'board': _encodeBoard(updatedGame.board),
         'activeMark': updatedGame.activePlayer.name,
         'activePlayerId': nextActivePlayerId,
         'status': _statusToString(updatedGame.status),
         'winnerMark': updatedGame.winner?.name,
-        'winnerPlayerId': updatedGame.winner == null
-            ? null
-            : (updatedGame.winner == PlayerMark.x ? playerXId : playerOId),
+        'winnerPlayerId': winnerPlayerId,
         'lastMoveIndex': position.index,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (updatedGame.status != GameStatus.inProgress && existingOutcome == null) {
+        final outcomePayload = <String, dynamic>{
+          'status': _statusToString(updatedGame.status),
+          'winnerPlayerId': winnerPlayerId,
+          'winnerMark': updatedGame.winner?.name,
+          'completedBy': 'board',
+        };
+
+        updates.addAll({
+          'completedAt': FieldValue.serverTimestamp(),
+          'outcome': outcomePayload,
+          'ratingDelta': _ratingDeltaStub(
+            playerXId: playerXId,
+            playerOId: playerOId,
+            winnerPlayerId: winnerPlayerId,
+            status: updatedGame.status,
+            endedByForfeit: false,
+          ),
+        });
+
+        analyticsEvent = {
+          'type': 'match_completed',
+          'matchId': matchId,
+          'trigger': 'board',
+          'status': outcomePayload['status'],
+          'winnerPlayerId': winnerPlayerId,
+          'participantIds': [playerXId, playerOId],
+          'ratingDelta': updates['ratingDelta'],
+        };
+      }
+
+      transaction.update(matchRef, updates);
     });
+
+    if (analyticsEvent != null) {
+      await _logAnalyticsEvent(matchId, analyticsEvent!);
+    }
   }
 
   @override
@@ -116,6 +156,7 @@ class FirebaseMatchRepository implements MatchRepository {
     required String playerId,
   }) async {
     final matchRef = _matchesCollection.doc(matchId);
+    Map<String, dynamic>? analyticsEvent;
 
     await _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(matchRef);
@@ -131,10 +172,90 @@ class FirebaseMatchRepository implements MatchRepository {
       }
 
       playerStates[playerId] = 'done';
-      transaction.update(matchRef, {
+      final statusString = (data['status'] as String?) ?? 'in_progress';
+      final currentStatus = _statusFromString(statusString);
+      final existingOutcome = data['outcome'] as Map<String, dynamic>?;
+
+      final playerXId = data['playerXId'] as String;
+      final playerOId = data['playerOId'] as String;
+      final opponentId = playerId == playerXId ? playerOId : playerXId;
+
+      final updates = <String, dynamic>{
         'playerStates.$playerId': 'done',
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (currentStatus == GameStatus.inProgress) {
+        final winningMark = playerId == playerXId ? 'o' : 'x';
+        final outcomePayload = <String, dynamic>{
+          'status': 'won',
+          'winnerPlayerId': opponentId,
+          'winnerMark': winningMark,
+          'completedBy': 'forfeit',
+          'forfeitBy': playerId,
+        };
+
+        updates.addAll({
+          'status': 'won',
+          'winnerMark': winningMark,
+          'winnerPlayerId': opponentId,
+          'activePlayerId': null,
+          'activeMark': winningMark,
+          'completedAt': FieldValue.serverTimestamp(),
+          'outcome': outcomePayload,
+          'ratingDelta': _ratingDeltaStub(
+            playerXId: playerXId,
+            playerOId: playerOId,
+            winnerPlayerId: opponentId,
+            status: GameStatus.won,
+            endedByForfeit: true,
+          ),
+        });
+
+        analyticsEvent = {
+          'type': 'match_completed',
+          'matchId': matchId,
+          'trigger': 'forfeit',
+          'status': 'won',
+          'winnerPlayerId': opponentId,
+          'forfeitBy': playerId,
+          'participantIds': [playerXId, playerOId],
+          'ratingDelta': updates['ratingDelta'],
+        };
+      } else if (existingOutcome == null) {
+        final winnerPlayerId = data['winnerPlayerId'] as String?;
+        final winnerMark = data['winnerMark'] as String?;
+        final derivedStatus = _statusFromString(statusString);
+
+        final outcomePayload = <String, dynamic>{
+          'status': _statusToString(derivedStatus),
+          'winnerPlayerId': winnerPlayerId,
+          'winnerMark': winnerMark,
+          'completedBy': 'manual_leave',
+        };
+
+        updates.addAll({
+          if (data['completedAt'] == null) 'completedAt': FieldValue.serverTimestamp(),
+          'outcome': outcomePayload,
+          'ratingDelta': _ratingDeltaStub(
+            playerXId: playerXId,
+            playerOId: playerOId,
+            winnerPlayerId: winnerPlayerId,
+            status: derivedStatus,
+            endedByForfeit: false,
+          ),
+        });
+
+        analyticsEvent = {
+          'type': 'match_completed',
+          'matchId': matchId,
+          'trigger': 'manual_leave',
+          'status': outcomePayload['status'],
+          'winnerPlayerId': winnerPlayerId,
+          'participantIds': [playerXId, playerOId],
+          'ratingDelta': updates['ratingDelta'],
+        };
+      }
 
       final remainingActive = playerStates.values
           .whereType<String>()
@@ -142,9 +263,18 @@ class FirebaseMatchRepository implements MatchRepository {
           .isNotEmpty;
 
       if (!remainingActive) {
-        transaction.delete(matchRef);
+        updates.addAll({
+          'archived': true,
+          'archivedAt': FieldValue.serverTimestamp(),
+        });
       }
+
+      transaction.update(matchRef, updates);
     });
+
+    if (analyticsEvent != null) {
+      await _logAnalyticsEvent(matchId, analyticsEvent!);
+    }
   }
 
   MatchState _mapSnapshot(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -249,5 +379,40 @@ class FirebaseMatchRepository implements MatchRepository {
       return value.toDate();
     }
     return DateTime.now();
+  }
+
+  Future<void> _logAnalyticsEvent(
+    String matchId,
+    Map<String, dynamic> payload,
+  ) async {
+    final eventRef = _matchesCollection.doc(matchId).collection('events').doc();
+    await eventRef.set({
+      ...payload,
+      'recordedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Map<String, int> _ratingDeltaStub({
+    required String playerXId,
+    required String playerOId,
+    required String? winnerPlayerId,
+    required GameStatus status,
+    required bool endedByForfeit,
+  }) {
+    if (status == GameStatus.draw || winnerPlayerId == null) {
+      return {
+        playerXId: 0,
+        playerOId: 0,
+      };
+    }
+
+    final loserPlayerId = winnerPlayerId == playerXId ? playerOId : playerXId;
+    final winnerDelta = endedByForfeit ? 12 : 8;
+    final loserDelta = -winnerDelta;
+
+    return {
+      winnerPlayerId: winnerDelta,
+      loserPlayerId: loserDelta,
+    };
   }
 }
