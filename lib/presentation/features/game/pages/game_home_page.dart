@@ -11,6 +11,7 @@ import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/m
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/game_status_banner.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/tic_tac_toe_board.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/ultimate_mode_board.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/modifier_category_reveal.dart';
 
 class GameHomePage extends ConsumerWidget {
@@ -301,6 +302,63 @@ class _MatchViewState extends ConsumerState<_MatchView> {
     final matchmakingController = ref.read(matchmakingControllerProvider.notifier);
     final isGameComplete = widget.match.game.status != GameStatus.inProgress;
     final ModifierCategory? modifierCategory = widget.match.modifierCategory;
+    final ultimateState = widget.match.ultimateState;
+
+    Widget boardWidget;
+    if (widget.match.isUltimateModeMatch && ultimateState != null) {
+      boardWidget = UltimateModeBoard(
+        state: ultimateState,
+        matchStatus: widget.match.status,
+        localPlayerMark: playerMark,
+        lastMove: ultimateState.lastMove,
+        onCellSelected: (position) => _playMove(
+          context,
+          matchRepository,
+          widget.match.id,
+          widget.playerId,
+          position,
+        ),
+        canSelectCell: (position) {
+          if (!_categoryRevealComplete) return false;
+          return widget.match.canPlayerSelectUltimateCell(
+            widget.playerId,
+            position,
+          );
+        },
+      );
+    } else if (widget.match.isUltimateModeMatch && ultimateState == null) {
+      boardWidget = const Center(child: CircularProgressIndicator());
+    } else {
+      boardWidget = TicTacToeBoard(
+        game: widget.match.game,
+        onCellSelected: (position) => _playMove(
+          context,
+          matchRepository,
+          widget.match.id,
+          widget.playerId,
+          position,
+        ),
+        localPlayerMark: playerMark,
+        canSelectCell: (position) {
+          if (!_categoryRevealComplete) return false;
+          return widget.match.canPlayerSelectCell(
+            widget.playerId,
+            position,
+          );
+        },
+        blockedPositions: widget.match.blockedPositions,
+        spinnerOptions: widget.match.spinnerOptions,
+        isSpinnerActive: _categoryRevealComplete &&
+            widget.match.modifierId == 'spinner' &&
+            widget.match.spinnerOptions.isNotEmpty &&
+            widget.match.game.status == GameStatus.inProgress,
+        isSpinnerTurnForLocalPlayer: _categoryRevealComplete &&
+            widget.match.modifierId == 'spinner' &&
+            widget.match.spinnerOptions.isNotEmpty &&
+            widget.match.isPlayerTurn(widget.playerId),
+        gravityDropPath: widget.match.gravityDropPath,
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -350,34 +408,7 @@ class _MatchViewState extends ConsumerState<_MatchView> {
                 duration: const Duration(milliseconds: 250),
                 child: IgnorePointer(
                   ignoring: !_categoryRevealComplete,
-                  child: TicTacToeBoard(
-                    game: widget.match.game,
-                    onCellSelected: (position) => _playMove(
-                      context,
-                      matchRepository,
-                      widget.match.id,
-                      widget.playerId,
-                      position,
-                    ),
-                    localPlayerMark: playerMark,
-                    canSelectCell: (position) {
-                      if (!_categoryRevealComplete) return false;
-                      return widget.match.canPlayerSelectCell(
-                        widget.playerId,
-                        position,
-                      );
-                    },
-                    blockedPositions: widget.match.blockedPositions,
-                    spinnerOptions: widget.match.spinnerOptions,
-                    isSpinnerActive: _categoryRevealComplete &&
-                        widget.match.modifierId == 'spinner' &&
-                        widget.match.spinnerOptions.isNotEmpty &&
-                        widget.match.game.status == GameStatus.inProgress,
-                    isSpinnerTurnForLocalPlayer: _categoryRevealComplete &&
-                        widget.match.modifierId == 'spinner' &&
-                        widget.match.spinnerOptions.isNotEmpty &&
-                        widget.match.isPlayerTurn(widget.playerId),
-                  ),
+                  child: boardWidget,
                 ),
               ),
               if (!_categoryRevealComplete)

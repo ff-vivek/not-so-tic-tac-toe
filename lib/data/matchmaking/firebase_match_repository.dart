@@ -6,6 +6,7 @@ import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/ultimate_board_state.dart';
 import 'package:not_so_tic_tac_toe_game/domain/exceptions/invalid_move_exception.dart';
 import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart';
 import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_algorithms.dart';
@@ -73,8 +74,6 @@ class FirebaseMatchRepository implements MatchRepository {
       final modifierId = data['modifierId'] as String?;
       final modifierState =
           (data['modifierState'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
-      final blockedSquareIndices = _readIntList(modifierState['blockedSquares']);
-      final spinnerChoiceIndices = _readIntList(modifierState['spinnerChoices']);
 
       final activeMarkString = data['activeMark'] as String? ?? 'x';
       final startingMarkString = data['startingMark'] as String? ?? 'x';
@@ -91,11 +90,34 @@ class FirebaseMatchRepository implements MatchRepository {
         activePlayer: _markFromString(activeMarkString) ?? PlayerMark.x,
         status: currentStatus,
         winner: _markFromString(winnerMarkString),
-        lastMove: lastMoveIndex == null
-            ? null
-            : BoardPosition(row: lastMoveIndex ~/ 3, col: lastMoveIndex % 3),
+        lastMove: lastMoveIndex == null ? null : BoardPosition.fromIndex(lastMoveIndex),
         startingPlayer: _markFromString(startingMarkString) ?? PlayerMark.x,
       );
+
+      if (modifierId == 'ultimate') {
+        final result = _processUltimateMove(
+          matchId: matchId,
+          data: data,
+          modifierState: modifierState,
+          position: position,
+          playerXId: playerXId,
+          playerOId: playerOId,
+          metaGame: currentGame,
+          existingOutcome: existingOutcome,
+        );
+
+        analyticsEvent = result.analyticsEvent;
+        transaction.update(matchRef, result.updates);
+        return;
+      }
+
+      final blockedSquaresSource = modifierState['blockedSquares'] ??
+          (modifierState['handYoureDealt'] as Map<String, dynamic>?)?['blockedSquares'];
+      final spinnerSource = modifierState['spinnerChoices'] ??
+          (modifierState['forcedMoves'] as Map<String, dynamic>?)?['spinnerChoices'];
+
+      final blockedSquareIndices = _readIntList(blockedSquaresSource);
+      final spinnerChoiceIndices = _readIntList(spinnerSource);
 
       if (blockedSquareIndices.contains(position.index)) {
         throw InvalidMoveException('That square is locked by the modifier.');
@@ -111,7 +133,18 @@ class FirebaseMatchRepository implements MatchRepository {
         throw InvalidMoveException('Select one of the spinner-highlighted squares.');
       }
 
-      final updatedGame = currentGame.playMove(position);
+      final isGravityWell = modifierId == 'gravity_well';
+
+      final gravityResult = isGravityWell
+          ? _applyGravityWellMove(
+              currentGame: currentGame,
+              selectedPosition: position,
+            )
+          : null;
+
+      final TicTacToeGame updatedGame = gravityResult?.updatedGame ?? currentGame.playMove(position);
+      final BoardPosition effectivePosition =
+          gravityResult?.finalPosition ?? position;
 
       final nextActivePlayerId = updatedGame.status == GameStatus.inProgress
           ? (updatedGame.activePlayer == PlayerMark.x ? playerXId : playerOId)
@@ -127,9 +160,14 @@ class FirebaseMatchRepository implements MatchRepository {
         'status': _statusToString(updatedGame.status),
         'winnerMark': updatedGame.winner?.name,
         'winnerPlayerId': winnerPlayerId,
-        'lastMoveIndex': position.index,
+        'lastMoveIndex': effectivePosition.index,
         'updatedAt': FieldValue.serverTimestamp(),
       };
+
+      if (isGravityWell) {
+        updates['modifierState.gravityWell.lastDropPath'] =
+            gravityResult?.dropPath ?? const <int>[];
+      }
 
       if (updatedGame.status != GameStatus.inProgress && existingOutcome == null) {
         final outcomePayload = <String, dynamic>{
@@ -321,13 +359,30 @@ class FirebaseMatchRepository implements MatchRepository {
     final modifierId = data['modifierId'] as String?;
     final modifierState =
         (data['modifierState'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    final blockedSquares = _readIntList(modifierState['blockedSquares'])
+
+    final blockedSquaresSource = modifierState['blockedSquares'] ??
+        (modifierState['handYoureDealt'] as Map<String, dynamic>?)?
+            ['blockedSquares'];
+    final blockedSquares = _readIntList(blockedSquaresSource)
         .map(BoardPosition.fromIndex)
         .toSet();
-    final spinnerChoices = _readIntList(modifierState['spinnerChoices'])
+
+    final spinnerSource = modifierState['spinnerChoices'] ??
+        (modifierState['forcedMoves'] as Map<String, dynamic>?)?
+            ['spinnerChoices'];
+    final spinnerChoices = _readIntList(spinnerSource)
         .map(BoardPosition.fromIndex)
         .toList();
     spinnerChoices.sort((a, b) => a.index.compareTo(b.index));
+
+    final gravityWellState = modifierState['gravityWell'] as Map<String, dynamic>?;
+    final gravityPath = _readIntList(gravityWellState?['lastDropPath'])
+        .map(BoardPosition.fromIndex)
+        .toList(growable: false);
+
+    final ultimateStateRaw = modifierState['ultimate'] as Map<String, dynamic>?;
+    final ultimateState =
+        ultimateStateRaw == null ? null : UltimateBoardState.fromMap(ultimateStateRaw);
 
     final game = TicTacToeGame.fromState(
       board: _decodeBoard(boardRaw),
@@ -336,7 +391,7 @@ class FirebaseMatchRepository implements MatchRepository {
       winner: _markFromString(winnerMarkString),
       lastMove: lastMoveIndex == null
           ? null
-          : BoardPosition(row: lastMoveIndex ~/ 3, col: lastMoveIndex % 3),
+          : BoardPosition.fromIndex(lastMoveIndex),
       startingPlayer: _markFromString(startingMarkString) ?? PlayerMark.x,
     );
 
@@ -366,7 +421,246 @@ class FirebaseMatchRepository implements MatchRepository {
       modifierId: modifierId,
       blockedPositions: blockedSquares,
       spinnerOptions: spinnerChoices,
+      gravityDropPath: gravityPath,
+      ultimateState: ultimateState,
     );
+  }
+
+  ({
+    TicTacToeGame updatedGame,
+    BoardPosition finalPosition,
+    List<int> dropPath,
+  }) _applyGravityWellMove({
+    required TicTacToeGame currentGame,
+    required BoardPosition selectedPosition,
+  }) {
+    const dimension = 3;
+    final col = selectedPosition.col;
+    final board = currentGame.board;
+
+    var finalRow = selectedPosition.row;
+    for (var row = dimension - 1; row >= 0; row--) {
+      final idx = row * dimension + col;
+      if (board[idx] == null) {
+        finalRow = row;
+        break;
+      }
+    }
+
+    final finalPosition = BoardPosition(row: finalRow, col: col, dimension: dimension);
+
+    if (!currentGame.canPlayAt(finalPosition)) {
+      throw InvalidMoveException('That column is full. Choose another.');
+    }
+
+    final path = <int>[];
+    if (finalRow >= selectedPosition.row) {
+      for (var row = selectedPosition.row; row <= finalRow; row++) {
+        path.add(BoardPosition(row: row, col: col, dimension: dimension).index);
+      }
+    } else {
+      for (var row = selectedPosition.row; row >= finalRow; row--) {
+        path.add(BoardPosition(row: row, col: col, dimension: dimension).index);
+      }
+    }
+
+    final updatedGame = currentGame.playMove(finalPosition);
+
+    return (
+      updatedGame: updatedGame,
+      finalPosition: finalPosition,
+      dropPath: path,
+    );
+  }
+
+  ({
+    Map<String, dynamic> updates,
+    Map<String, dynamic>? analyticsEvent,
+  }) _processUltimateMove({
+    required String matchId,
+    required Map<String, dynamic> data,
+    required Map<String, dynamic> modifierState,
+    required BoardPosition position,
+    required String playerXId,
+    required String playerOId,
+    required TicTacToeGame metaGame,
+    required Map<String, dynamic>? existingOutcome,
+  }) {
+    if (position.dimension != 9) {
+      throw InvalidMoveException('Ultimate mode moves must use the 9x9 grid.');
+    }
+
+    final rawUltimate = modifierState['ultimate'] as Map<String, dynamic>?;
+    if (rawUltimate == null) {
+      throw StateError('Ultimate mode state is unavailable for this match.');
+    }
+
+    final ultimateState = UltimateBoardState.fromMap(
+      Map<String, dynamic>.from(rawUltimate),
+    );
+
+    final breakdown = ultimateState.resolveAbsolute(position);
+
+    if (ultimateState.activeBoardIndex != null &&
+        ultimateState.activeBoardIndex != breakdown.miniIndex) {
+      throw InvalidMoveException('You must play in the highlighted mini-board.');
+    }
+
+    final miniBoard = ultimateState.boardAt(breakdown.miniIndex);
+    if (!miniBoard.isPlayable) {
+      throw InvalidMoveException('That mini-board has already been resolved.');
+    }
+
+    if (miniBoard.cells[breakdown.cellIndex] != null) {
+      throw InvalidMoveException('That square is already occupied.');
+    }
+
+    final miniBoards = ultimateState.miniBoards.toList(growable: true);
+
+    final miniGameBefore = TicTacToeGame.fromState(
+      board: List<PlayerMark?>.from(miniBoard.cells),
+      activePlayer: metaGame.activePlayer,
+      status: GameStatus.inProgress,
+      winner: miniBoard.winner,
+      lastMove: null,
+      startingPlayer: metaGame.startingPlayer,
+    );
+
+    final localPosition = BoardPosition(
+      row: breakdown.cellRow,
+      col: breakdown.cellCol,
+    );
+
+    final miniGameAfter = miniGameBefore.playMove(localPosition);
+
+    final updatedMiniBoard = UltimateMiniBoard(
+      index: miniBoard.index,
+      cells: miniGameAfter.board,
+      status: miniGameAfter.status,
+      winner: miniGameAfter.winner,
+    );
+
+    miniBoards[miniBoard.index] = updatedMiniBoard;
+
+    final metaBoard = List<PlayerMark?>.from(metaGame.board);
+    if (miniGameAfter.status == GameStatus.won) {
+      metaBoard[breakdown.miniIndex] = miniGameAfter.winner;
+    } else if (miniGameAfter.status == GameStatus.draw) {
+      metaBoard[breakdown.miniIndex] = null;
+    }
+
+    final metaWinner = _detectWinner(metaBoard);
+    final hasPlayableBoards = miniBoards.any(
+      (board) => board.isPlayable && board.openCellIndices.isNotEmpty,
+    );
+
+    final matchStatus = metaWinner != null
+        ? GameStatus.won
+        : hasPlayableBoards
+            ? GameStatus.inProgress
+            : GameStatus.draw;
+
+    final winnerPlayerId = metaWinner == null
+        ? null
+        : (metaWinner == PlayerMark.x ? playerXId : playerOId);
+
+    final nextActiveMark = matchStatus == GameStatus.inProgress
+        ? metaGame.activePlayer.opponent
+        : metaGame.activePlayer;
+    final nextActivePlayerId = matchStatus == GameStatus.inProgress
+        ? (nextActiveMark == PlayerMark.x ? playerXId : playerOId)
+        : null;
+
+    int? nextBoardIndex = breakdown.cellIndex;
+    if (matchStatus != GameStatus.inProgress) {
+      nextBoardIndex = null;
+    } else {
+      final candidateBoard = miniBoards[nextBoardIndex];
+      if (!candidateBoard.isPlayable || candidateBoard.openCellIndices.isEmpty) {
+        nextBoardIndex = null;
+      }
+    }
+
+    final updatedUltimateState = UltimateBoardState(
+      miniBoards: miniBoards,
+      activeBoardIndex: nextBoardIndex,
+      lastMove: BoardPosition(
+        row: position.row,
+        col: position.col,
+        dimension: position.dimension,
+      ),
+    );
+
+    final updates = <String, dynamic>{
+      'board': _encodeBoard(metaBoard),
+      'activeMark': nextActiveMark.name,
+      'activePlayerId': nextActivePlayerId,
+      'status': _statusToString(matchStatus),
+      'winnerMark': metaWinner?.name,
+      'winnerPlayerId': winnerPlayerId,
+      'lastMoveIndex': null,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'modifierState.ultimate': updatedUltimateState.toMap(),
+    };
+
+    Map<String, dynamic>? analytics;
+
+    if (matchStatus != GameStatus.inProgress && existingOutcome == null) {
+      final outcomePayload = <String, dynamic>{
+        'status': _statusToString(matchStatus),
+        'winnerPlayerId': winnerPlayerId,
+        'winnerMark': metaWinner?.name,
+        'completedBy': 'ultimate',
+      };
+
+      updates.addAll({
+        'completedAt': FieldValue.serverTimestamp(),
+        'outcome': outcomePayload,
+        'ratingDelta': _ratingDeltaStub(
+          playerXId: playerXId,
+          playerOId: playerOId,
+          winnerPlayerId: winnerPlayerId,
+          status: matchStatus,
+          endedByForfeit: false,
+        ),
+      });
+
+      analytics = {
+        'type': 'match_completed',
+        'matchId': matchId,
+        'trigger': 'ultimate',
+        'status': outcomePayload['status'],
+        'winnerPlayerId': winnerPlayerId,
+        'participantIds': [playerXId, playerOId],
+        'ratingDelta': updates['ratingDelta'],
+      };
+    }
+
+    return (updates: updates, analyticsEvent: analytics);
+  }
+
+  PlayerMark? _detectWinner(List<PlayerMark?> board) {
+    const winningLines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+
+    for (final line in winningLines) {
+      final a = board[line[0]];
+      final b = board[line[1]];
+      final c = board[line[2]];
+      if (a != null && a == b && a == c) {
+        return a;
+      }
+    }
+
+    return null;
   }
 
   List<int> _readIntList(dynamic value) {

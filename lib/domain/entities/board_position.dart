@@ -1,29 +1,56 @@
 class BoardPosition {
-  const BoardPosition({required this.row, required this.col}) : assert(row < 0 || row > 2 || col < 0 || col > 2,'BoardPosition must be within 0-2 for both row and col');
+  const BoardPosition({
+    required this.row,
+    required this.col,
+    this.dimension = 3,
+  })  : assert(dimension > 0, 'Board dimension must be positive'),
+        assert(row >= 0 && row < dimension,
+            'Row index $row must be within 0 and ${dimension - 1}.'),
+        assert(col >= 0 && col < dimension,
+            'Column index $col must be within 0 and ${dimension - 1}.');
 
   final int row;
   final int col;
+  final int dimension;
 
-  int get index => row * 3 + col;
+  int get index => row * dimension + col;
 
-  factory BoardPosition.fromIndex(int index) {
-    if (index < 0 || index > 8) {
-      throw ArgumentError('BoardPosition index must be between 0 and 8.');
+  factory BoardPosition.fromIndex(int index, {int dimension = 3}) {
+    if (dimension <= 0) {
+      throw ArgumentError.value(dimension, 'dimension', 'Must be positive');
     }
-    final row = index ~/ 3;
-    final col = index % 3;
-    return BoardPosition(row: row, col: col);
+    final maxIndex = dimension * dimension;
+    if (index < 0 || index >= maxIndex) {
+      throw ArgumentError(
+        'BoardPosition index must be between 0 and ${maxIndex - 1}.',
+      );
+    }
+    final row = index ~/ dimension;
+    final col = index % dimension;
+    return BoardPosition(row: row, col: col, dimension: dimension);
+  }
+
+  BoardPosition copyWith({int? row, int? col, int? dimension}) {
+    return BoardPosition(
+      row: row ?? this.row,
+      col: col ?? this.col,
+      dimension: dimension ?? this.dimension,
+    );
   }
 
   @override
-  int get hashCode => Object.hash(row, col);
+  int get hashCode => Object.hash(row, col, dimension);
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is BoardPosition && other.row == row && other.col == col;
+    return other is BoardPosition &&
+        other.row == row &&
+        other.col == col &&
+        other.dimension == dimension;
   }
 
   @override
-  String toString() => 'BoardPosition(row: $row, col: $col)';
+  String toString() =>
+      'BoardPosition(row: $row, col: $col, dimension: $dimension)';
 }

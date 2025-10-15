@@ -18,6 +18,7 @@ class TicTacToeBoard extends StatelessWidget {
     this.spinnerOptions = const [],
     this.isSpinnerActive = false,
     this.isSpinnerTurnForLocalPlayer = false,
+    this.gravityDropPath = const [],
   });
 
   final TicTacToeGame game;
@@ -28,6 +29,7 @@ class TicTacToeBoard extends StatelessWidget {
   final List<BoardPosition> spinnerOptions;
   final bool isSpinnerActive;
   final bool isSpinnerTurnForLocalPlayer;
+  final List<BoardPosition> gravityDropPath;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +39,7 @@ class TicTacToeBoard extends StatelessWidget {
     final board = game.board;
     final overlayDetails = _overlayDetails(theme);
     final spinnerSet = spinnerOptions.toSet();
+    final gravityDropDetails = _gravityDropDetails();
 
     return Center(
       child: AspectRatio(
@@ -64,6 +67,7 @@ class TicTacToeBoard extends StatelessWidget {
                       final mark = board[index];
                       final position = BoardPosition(row: row, col: col);
                       final predicate = canSelectCell ?? game.canPlayAt;
+                      final gravityDistance = gravityDropDetails[position.index];
 
                       return _BoardCell(
                         mark: mark,
@@ -75,6 +79,7 @@ class TicTacToeBoard extends StatelessWidget {
                         isSpinnerOption: spinnerSet.contains(position),
                         spinnerActive: isSpinnerActive,
                         emphasizeSpinner: isSpinnerTurnForLocalPlayer,
+                        gravityDropDistance: gravityDistance??0,
                       );
                     },
                   ),
@@ -89,6 +94,26 @@ class TicTacToeBoard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Map<int, double> _gravityDropDetails() {
+    if (gravityDropPath.length < 2) {
+      return const {};
+    }
+
+    final start = gravityDropPath.first;
+    final end = gravityDropPath.last;
+    if (start.dimension != 3 || end.dimension != 3) {
+      return const {};
+    }
+    final distance = (end.row - start.row).abs().toDouble();
+    if (distance == 0) {
+      return const {};
+    }
+
+    return {
+      end.index: distance,
+    };
   }
 
   _OverlayDetails? _overlayDetails(ThemeData theme) {
@@ -155,6 +180,7 @@ class _BoardCell extends StatelessWidget {
     required this.isSpinnerOption,
     required this.spinnerActive,
     required this.emphasizeSpinner,
+    this.gravityDropDistance=0,
   });
 
   final PlayerMark? mark;
@@ -166,6 +192,7 @@ class _BoardCell extends StatelessWidget {
   final bool isSpinnerOption;
   final bool spinnerActive;
   final bool emphasizeSpinner;
+  final double gravityDropDistance;
 
   @override
   Widget build(BuildContext context) {
@@ -225,14 +252,15 @@ class _BoardCell extends StatelessWidget {
                 child: AnimatedScale(
                   scale: mark == null ? 0 : 1,
                   duration: const Duration(milliseconds: 160),
-                  child: Text(
-                    mark?.label ?? '',
-                    style: theme.textTheme.displayMedium?.copyWith(
+                  child: _GravityAnimatedMark(
+                    mark: mark,
+                    textStyle: theme.textTheme.displayMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: mark == PlayerMark.x
                           ? theme.colorScheme.primary
                           : theme.colorScheme.secondary,
                     ),
+                    gravityDropDistance: gravityDropDistance,
                   ),
                 ),
               ),
@@ -267,6 +295,51 @@ class _BlockedOverlay extends StatelessWidget {
         size: 30,
         color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
       ),
+    );
+  }
+}
+
+class _GravityAnimatedMark extends StatelessWidget {
+  const _GravityAnimatedMark({
+    required this.mark,
+    required this.textStyle,
+    required this.gravityDropDistance,
+  });
+
+  final PlayerMark? mark;
+  final TextStyle? textStyle;
+  final double? gravityDropDistance;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Text(
+      mark?.label ?? '',
+      style: textStyle,
+    );
+
+    if (mark == null || gravityDropDistance == null) {
+      return content;
+    }
+
+    if (gravityDropDistance == 0) {
+      return content;
+    }
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('gravity-${mark!.name}-${gravityDropDistance!.toStringAsFixed(2)}'),
+      tween: Tween<double>(
+        begin: -gravityDropDistance!,
+        end: 0,
+      ),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return FractionalTranslation(
+          translation: Offset(0, value),
+          child: child,
+        );
+      },
+      child: content,
     );
   }
 }

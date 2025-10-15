@@ -14,7 +14,9 @@ final modifierRegistryProvider = Provider<ModifierRegistry>((ref) {
   registry
     ..register(() => NoOpModifier())
     ..register(() => ReservedModifier(modifierId: 'blocked_squares'))
-    ..register(() => ReservedModifier(modifierId: 'spinner'));
+    ..register(() => ReservedModifier(modifierId: 'spinner'))
+    ..register(() => ReservedModifier(modifierId: 'gravity_well'))
+    ..register(() => ReservedModifier(modifierId: 'ultimate'));
   return registry;
 });
 

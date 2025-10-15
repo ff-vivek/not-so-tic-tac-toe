@@ -324,9 +324,9 @@ Integration tests for navigation flows
 ## **Phase 8: Advanced Modifiers** (Epic 2 - Expansion)
 
 ### 8.1 Gravity Well Modifier
-- [ ] Implement physics simulation for piece sliding
-- [ ] Design and implement slide animations
-- [ ] Handle post-slide win detection
+- [x] Implement physics simulation for piece sliding
+- [x] Design and implement slide animations
+- [x] Handle post-slide win detection
 - [ ] Edge case testing (self-sabotage, draws)
 
 ### 8.2 Volatile Squares Modifier
@@ -336,12 +336,12 @@ Integration tests for navigation flows
 - [ ] Win detection after explosions
 
 ### 8.3 Ultimate Mode (Opponent's Choice)
-- [ ] Design 9-grid (3x3 meta-board) data structure
-- [ ] Implement mini-grid win/draw detection
-- [ ] Implement main board win logic
-- [ ] Handle wildcard rule (when sent to won/drawn grid)
-- [ ] Design complex UI for 9x9 grid
-- [ ] Visual highlighting of active mini-grid
+- [x] Design 9-grid (3x3 meta-board) data structure
+- [x] Implement mini-grid win/draw detection
+- [x] Implement main board win logic
+- [x] Handle wildcard rule (when sent to won/drawn grid)
+- [x] Design complex UI for 9x9 grid
+- [x] Visual highlighting of active mini-grid
 - [ ] Comprehensive testing of all edge cases
 
 ---

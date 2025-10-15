@@ -111,6 +111,12 @@ class GameStatusBanner extends StatelessWidget {
               : 'Opponent must choose a highlighted square.',
         );
         break;
+      case 'gravity_well':
+        lines.add('Marks fall to the lowest open slot in their column.');
+        break;
+      case 'ultimate':
+        lines.add('Conquer mini-boards to claim the main grid. Follow the highlighted board.');
+        break;
       default:
         if (activeModifierCategory != null) {
           lines.add(activeModifierCategory!.tagline);

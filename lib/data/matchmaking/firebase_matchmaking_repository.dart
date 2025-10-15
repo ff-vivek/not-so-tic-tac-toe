@@ -115,24 +115,57 @@ class FirebaseMatchmakingRepository implements MatchmakingRepository {
   _ModifierInfo _selectModifierForCategory(ModifierCategory category) {
     switch (category) {
       case ModifierCategory.handYoureDealt:
-        final blockedSquares = generateBlockedSquares(_random);
-        return _ModifierInfo(
-          id: 'blocked_squares',
-          state: {
-            'blockedSquares': blockedSquares,
-          },
-        );
+        final options = <_ModifierInfo>[
+          () {
+            final blockedSquares = generateBlockedSquares(_random);
+            return _ModifierInfo(
+              id: 'blocked_squares',
+              state: {
+                'blockedSquares': blockedSquares,
+              },
+            );
+          }(),
+          _ModifierInfo(
+            id: 'gravity_well',
+            state: {
+              'gravityWell': {
+                'lastDropPath': const <int>[],
+              },
+            },
+          ),
+        ];
+        return options[_random.nextInt(options.length)];
       case ModifierCategory.forcedMoves:
         final spinnerChoices = generateSpinnerChoices(
           random: _random,
           board: List<PlayerMark?>.filled(9, null),
         );
-        return _ModifierInfo(
-          id: 'spinner',
-          state: {
-            'spinnerChoices': spinnerChoices,
-          },
-        );
+        final options = <_ModifierInfo>[
+          _ModifierInfo(
+            id: 'spinner',
+            state: {
+              'spinnerChoices': spinnerChoices,
+            },
+          ),
+          _ModifierInfo(
+            id: 'ultimate',
+            state: {
+              'ultimate': {
+                'activeBoardIndex': null,
+                'lastMove': null,
+                'boards': List.generate(9, (index) {
+                  return {
+                    'index': index,
+                    'cells': List<dynamic>.filled(9, null),
+                    'status': 'in_progress',
+                    'winnerMark': null,
+                  };
+                }),
+              },
+            },
+          ),
+        ];
+        return options[_random.nextInt(options.length)];
     }
   }
 }

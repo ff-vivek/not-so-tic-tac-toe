@@ -4,6 +4,7 @@ import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/ultimate_board_state.dart';
 
 void main() {
   group('MatchState', () {
@@ -71,6 +72,52 @@ void main() {
       final state = buildState(winningGame);
 
       expect(state.winnerPlayerId(), equals(playerO));
+    });
+
+    test('ultimate mode canSelect respects active board', () {
+      final miniBoards = List.generate(
+        9,
+        (index) => UltimateMiniBoard(
+          index: index,
+          cells: List<PlayerMark?>.filled(9, null),
+          status: GameStatus.inProgress,
+          winner: null,
+        ),
+      );
+
+      final ultimateState = UltimateBoardState(
+        miniBoards: miniBoards,
+        activeBoardIndex: 4,
+      );
+
+      final match = MatchState(
+        id: 'ultimate-1',
+        playerXId: playerX,
+        playerOId: playerO,
+        game: TicTacToeGame.fromState(
+          board: List<PlayerMark?>.filled(9, null),
+          activePlayer: PlayerMark.x,
+          status: GameStatus.inProgress,
+          winner: null,
+          lastMove: null,
+          startingPlayer: PlayerMark.x,
+        ),
+        status: GameStatus.inProgress,
+        playerStates: const {
+          playerX: MatchParticipantState.active,
+          playerO: MatchParticipantState.active,
+        },
+        createdAt: DateTime.utc(2024, 1, 1),
+        updatedAt: DateTime.utc(2024, 1, 1),
+        modifierId: 'ultimate',
+        ultimateState: ultimateState,
+      );
+
+      final allowedPosition = BoardPosition(row: 4, col: 5, dimension: 9);
+      final blockedPosition = BoardPosition(row: 0, col: 0, dimension: 9);
+
+      expect(match.canPlayerSelectUltimateCell(playerX, allowedPosition), isTrue);
+      expect(match.canPlayerSelectUltimateCell(playerX, blockedPosition), isFalse);
     });
   });
 }
