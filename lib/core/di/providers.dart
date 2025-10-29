@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:not_so_tic_tac_toe_game/auth/auth_manager.dart';
+import 'package:not_so_tic_tac_toe_game/core/analytics/analytics_service.dart';
 import 'package:not_so_tic_tac_toe_game/data/matchmaking/firebase_match_repository.dart';
 import 'package:not_so_tic_tac_toe_game/data/matchmaking/firebase_matchmaking_repository.dart';
 import 'package:not_so_tic_tac_toe_game/data/modifiers/stub_modifiers.dart';
 import 'package:not_so_tic_tac_toe_game/data/player/firebase_player_profile_repository.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/player/controllers/player_account_service.dart';
 import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_registry.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/match_repository.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/matchmaking_repository.dart';
@@ -35,6 +38,15 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
   return FirebaseFirestore.instance;
 });
 
+final firebaseAnalyticsProvider = Provider<FirebaseAnalytics>((ref) {
+  return FirebaseAnalytics.instance;
+});
+
+final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
+  final analytics = ref.watch(firebaseAnalyticsProvider);
+  return AnalyticsService(analytics);
+});
+
 final playerIdProvider = Provider<String>((ref) {
   final authManager = ref.watch(authManagerProvider);
   final userId = authManager.currentUserId;
@@ -57,4 +69,10 @@ final matchRepositoryProvider = Provider<MatchRepository>((ref) {
 final playerProfileRepositoryProvider = Provider<PlayerProfileRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
   return FirebasePlayerProfileRepository(firestore);
+});
+
+final playerAccountServiceProvider = Provider<PlayerAccountService>((ref) {
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  return PlayerAccountService(auth, firestore);
 });

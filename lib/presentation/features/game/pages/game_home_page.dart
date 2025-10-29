@@ -10,6 +10,7 @@ import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/match_repository.dart';
 import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/match_highlight_controller.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/auth/account_sheet.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/matchmaking_controller.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/offline_match_controller.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
@@ -79,7 +80,7 @@ class GameHomePage extends ConsumerWidget {
                   children: [
                     _GameHeader(
                       matchmakingState: matchmakingState,
-                      onSettingsTap: () => _showComingSoon(context, 'Settings'),
+                      onSettingsTap: () => _showAccountSheet(context),
                       onHistoryTap: () => _showComingSoon(context, 'Match history'),
                     ),
                     const SizedBox(height: 24),
@@ -229,6 +230,16 @@ class GameHomePage extends ConsumerWidget {
         content: Text('$featureName is coming soon.'),
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  Future<void> _showAccountSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      isScrollControlled: false,
+      builder: (context) => const AccountSheet(),
     );
   }
 }

@@ -35,13 +35,24 @@ class FirebasePlayerProfileRepository implements PlayerProfileRepository {
         final data = snapshot.data()!;
         final hasCurrent = data.containsKey('currentWinStreak');
         final hasMax = data.containsKey('maxWinStreak');
+        final hasCurrency = data.containsKey('currencySoft');
+        final hasInventory = data.containsKey('inventory');
         if (hasCurrent && hasMax) {
-          return;
+          // continue to check other fields to backfill
         }
 
         final updates = <String, dynamic>{};
         if (!hasCurrent) updates['currentWinStreak'] = 0;
         if (!hasMax) updates['maxWinStreak'] = 0;
+        if (!hasCurrency) updates['currencySoft'] = 0;
+        if (!hasInventory) {
+          updates['inventory'] = {
+            'ownedMarkSkins': <String>[],
+            'ownedBoardSkins': <String>[],
+            'equippedMarkSkin': null,
+            'equippedBoardSkin': null,
+          };
+        }
         if (updates.isNotEmpty) {
           updates['updatedAt'] = FieldValue.serverTimestamp();
           transaction.update(docRef, updates);
@@ -52,6 +63,13 @@ class FirebasePlayerProfileRepository implements PlayerProfileRepository {
       transaction.set(docRef, {
         'currentWinStreak': 0,
         'maxWinStreak': 0,
+        'currencySoft': 0,
+        'inventory': {
+          'ownedMarkSkins': <String>[],
+          'ownedBoardSkins': <String>[],
+          'equippedMarkSkin': null,
+          'equippedBoardSkin': null,
+        },
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });

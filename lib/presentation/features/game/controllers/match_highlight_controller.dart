@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -10,6 +11,8 @@ import 'package:file_saver/file_saver.dart';
 
 import 'package:not_so_tic_tac_toe_game/presentation/features/highlights/highlight_recorder.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/highlights/highlight_share_target.dart';
+import 'package:not_so_tic_tac_toe_game/core/analytics/analytics_service.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
 
 class MatchHighlightState {
   const MatchHighlightState({
@@ -44,7 +47,7 @@ class MatchHighlightState {
 }
 
 class MatchHighlightController extends StateNotifier<MatchHighlightState> {
-  MatchHighlightController()
+  MatchHighlightController(this._analytics, this._matchId)
       : _recorder = BoardHighlightRecorder(
           retention: const Duration(seconds: 10),
           interval: const Duration(milliseconds: 500),
@@ -54,6 +57,8 @@ class MatchHighlightController extends StateNotifier<MatchHighlightState> {
     _recorder.updateCaptureCallback(_handleFrameCaptured);
   }
 
+  final AnalyticsService _analytics;
+  final String _matchId;
   final BoardHighlightRecorder _recorder;
   GlobalKey? _boundaryKey;
 
@@ -82,6 +87,12 @@ class MatchHighlightController extends StateNotifier<MatchHighlightState> {
   }
 
   Future<void> shareHighlight(HighlightShareTarget target) async {
+    // Fire-and-forget analytics for the click
+    unawaited(_analytics.shareButtonClick(
+      matchId: _matchId,
+      target: target.name,
+    ));
+
     state = state.copyWith(shareState: const AsyncLoading<void>());
 
     try {
@@ -211,5 +222,6 @@ final matchHighlightControllerProvider =
         MatchHighlightController,
         MatchHighlightState,
         String>(
-  (ref, _) => MatchHighlightController(),
+  (ref, matchId) =>
+      MatchHighlightController(ref.read(analyticsServiceProvider), matchId),
 );

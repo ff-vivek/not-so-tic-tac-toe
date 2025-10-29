@@ -6,6 +6,8 @@ import 'package:not_so_tic_tac_toe_game/domain/repositories/matchmaking_reposito
 import 'package:not_so_tic_tac_toe_game/domain/value_objects/match_join_result.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
 import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart';
+import 'package:not_so_tic_tac_toe_game/core/analytics/analytics_service.dart';
 
 enum MatchmakingPhase { idle, searching, connecting, matchReady, error }
 
@@ -60,22 +62,44 @@ class MatchmakingController extends Notifier<MatchmakingState> {
 
   @override
   MatchmakingState build() {
-    ref.listen<AsyncValue<MatchState?>>(
-      activeMatchProvider,
-      (_, next) {
-        next.whenData((match) {
-          if (match != null) {
-            state = state.copyWith(
-              phase: MatchmakingPhase.matchReady,
-              assignedMatchId: match.id,
-              errorMessage: null,
+    ref.listen<AsyncValue<MatchState?>>(activeMatchProvider, (previous, next) async {
+      final analytics = ref.read(analyticsServiceProvider);
+
+      final MatchState? prevMatch = previous?.asData?.value;
+      final MatchState? newMatch = next.asData?.value;
+
+      if (newMatch != null) {
+        state = state.copyWith(
+          phase: MatchmakingPhase.matchReady,
+          assignedMatchId: newMatch.id,
+          errorMessage: null,
+        );
+
+        // If we were previously not in this same match, consider this a match_start
+        if (prevMatch == null || prevMatch.id != newMatch.id) {
+          await analytics.matchStart(
+            matchId: newMatch.id,
+            modifierCategory: newMatch.modifierCategory?.storageValue,
+            modifierId: newMatch.modifierId,
+          );
+        }
+
+        // If status transitioned from in_progress to terminal, log match_end
+        if (prevMatch != null && prevMatch.id == newMatch.id) {
+          final wasInProgress = prevMatch.status == GameStatus.inProgress;
+          final nowTerminal = newMatch.status != GameStatus.inProgress;
+          if (wasInProgress && nowTerminal) {
+            await analytics.matchEnd(
+              matchId: newMatch.id,
+              status: _statusToString(newMatch.status),
+              winnerPlayerId: newMatch.winnerPlayerId(),
             );
-          } else if (state.phase == MatchmakingPhase.matchReady) {
-            state = const MatchmakingState.idle();
           }
-        });
-      },
-    );
+        }
+      } else if (state.phase == MatchmakingPhase.matchReady) {
+        state = const MatchmakingState.idle();
+      }
+    });
 
     ref.onDispose(() {
       if (state.phase == MatchmakingPhase.searching) {
@@ -94,6 +118,9 @@ class MatchmakingController extends Notifier<MatchmakingState> {
 
     final currentToken = ++_operationToken;
     state = const MatchmakingState.searching();
+    // Log matchmaking search start
+    final analytics = ref.read(analyticsServiceProvider);
+    unawaited(analytics.matchSearchStart());
 
     try {
       final result = await _repository.joinQueue(_playerId);
@@ -153,6 +180,18 @@ class MatchmakingController extends Notifier<MatchmakingState> {
   Future<void> playAgain(String matchId) async {
     await leaveMatch(matchId);
     await startSearch();
+  }
+}
+
+String _statusToString(GameStatus status) {
+  switch (status) {
+    case GameStatus.won:
+      return 'won';
+    case GameStatus.draw:
+      return 'draw';
+    case GameStatus.inProgress:
+    default:
+      return 'in_progress';
   }
 }
 
