@@ -5,9 +5,11 @@ import 'package:not_so_tic_tac_toe_game/auth/auth_manager.dart';
 import 'package:not_so_tic_tac_toe_game/data/matchmaking/firebase_match_repository.dart';
 import 'package:not_so_tic_tac_toe_game/data/matchmaking/firebase_matchmaking_repository.dart';
 import 'package:not_so_tic_tac_toe_game/data/modifiers/stub_modifiers.dart';
+import 'package:not_so_tic_tac_toe_game/data/player/firebase_player_profile_repository.dart';
 import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_registry.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/match_repository.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/matchmaking_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/player_profile_repository.dart';
 
 final modifierRegistryProvider = Provider<ModifierRegistry>((ref) {
   final registry = ModifierRegistry();
@@ -50,4 +52,9 @@ final matchmakingRepositoryProvider = Provider<MatchmakingRepository>((ref) {
 final matchRepositoryProvider = Provider<MatchRepository>((ref) {
   final firestore = ref.watch(firestoreProvider);
   return FirebaseMatchRepository(firestore);
+});
+
+final playerProfileRepositoryProvider = Provider<PlayerProfileRepository>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  return FirebasePlayerProfileRepository(firestore);
 });

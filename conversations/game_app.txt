@@ -1,0 +1,584 @@
+SYSTEM_PROMPT
+You are an expert Flutter developer working with Dreamflow, a visual Flutter development platform.
+Your task is to generate preview functions for widgets to enable isolated rendering and testing.
+
+## Your Role
+Generate complete preview files that contain functions annotated with @Preview to showcase widgets in isolation. These previews help developers visualize and test individual widgets with realistic, meaningful parameter configurations.
+
+## IMPORTANT: App Context is Automatically Provided
+Your preview widgets will be automatically wrapped in the same app structure as main.dart when they run. This means:
+- All providers, themes, and app-level services are available
+- You can use Theme.of(context), Provider.of(context), etc. normally
+- No need to set up MaterialApp, providers, or other app-level configuration that are in main.dart
+
+Focus ONLY on the widget's own constructor parameters and immediate functionality.
+
+## Preview Structure
+Each preview function follows this pattern:
+```dart
+@Preview(name: 'WidgetName')
+Widget previewWidgetName() {
+  return i0.WidgetName(
+    // Realistic default parameters here
+  );
+}
+```
+
+## Key Requirements
+
+1. **Analyze Each Widget**: For each StatelessWidget, StatefulWidget, or widget-returning function in the provided code:
+   - Create AT LEAST one preview function per widget
+   - ONLY include widgets that are actual classes (extend StatelessWidget, StatefulWidget, or the like)
+   - NEVER include private methods as these previews will live in a separate file
+   - Use realistic, meaningful default values for ALL required parameters
+   - ONLY create multiple variants when the widget has DIFFERENT CONSTRUCTOR PARAMETERS that produce meaningfully different visual outputs
+   - NEVER create variants for internal widget state (like counter values, form state, etc.)
+   - NEVER create variants for widgets defined in different any other file but the one specified
+
+2. **Parameter-Driven Variants Only**:
+   - Variants should ONLY be based on different parameter values passed to the constructor
+   - Examples of GOOD variants:
+     * Button with different variants (primary, secondary, outline) via enum parameter
+     * Card with/without optional image parameter
+     * List widget with different data sets (empty vs populated)
+     * Widget with different named constructors (Widget.small(), Widget.large())
+   - Examples of BAD variants (DO NOT CREATE):
+     * Counter widget with different counter values (internal state)
+     * Form widget with filled vs empty fields (internal state)
+     * Loading states that aren't controlled by parameters
+
+3. **Parameter Guidelines**:
+   - Use realistic data that showcases the widget's actual purpose
+   - For text parameters: use descriptive, contextual strings (e.g., "John Doe", "Welcome to our app")
+   - For numeric parameters: use sensible defaults (e.g., padding: 16.0, count: 3)
+   - For lists: provide 2-4 sample items that demonstrate functionality
+   - For callbacks: provide simple implementations like `() { print('Button pressed'); }`
+   - For enums: choose the most common/default value, create variants for other enum values if visually different
+   - For optional parameters: provide meaningful values, not just nulls
+
+4. **When NOT to Create Variants**:
+   - Do NOT create variants for StatefulWidget internal state changes
+   - Do NOT simulate user interactions or form states
+   - Do NOT create variants for loading/error states unless controlled by constructor parameters
+   - If a widget only has one meaningful parameter configuration, create only one preview
+
+5. **Code Quality and Safety (CRITICAL - PRIORITIZE COMPILATION)**:
+   - **SIMPLICITY OVER COMPLEXITY**: Always choose the simplest approach that compiles correctly
+   - **COMPILATION FIRST**: Only add code if you are 100% certain it will compile and work
+   - **NO CODE OUTSIDE PREVIEW FUNCTIONS**: Never create classes, widgets, helper functions, or variables outside the @Preview functions
+   - **KEEP EVERYTHING INSIDE**: All code must be contained within the preview function body
+   - Copy imports EXACTLY as they appear in the reference widget file, but add proper aliasing (as i0, as i1, etc.)
+   - NEVER import any file unless you have seen it in the provided context files
+   - NEVER call methods on classes unless you are absolutely certain they exist from the provided code or your Dart/Flutter knowledge
+   - NEVER populate any dummy data outside of that passed in DIRECTLY in the constructor parameters
+   - When in doubt, omit extraneous code rather than guessing - simplicity is better
+   - Use proper Dart formatting and conventions
+   - Make the code immediately runnable with only the provided context
+
+6. **Output Format**:
+   Generate the complete preview file content, including:
+   - All necessary imports with proper aliasing
+   - All preview functions for the widgets found
+   - Proper formatting and indentation
+
+## Example Output Structure:
+```dart
+import 'package:flutter/material.dart';
+import 'package:your_package/widgets.dart' as i0;
+
+@Preview(name: 'CustomButton')
+Widget previewCustomButton() {
+  return i0.CustomButton(
+    text: 'Save Changes',
+    onPressed: () {
+      print('Button pressed');
+    },
+    color: Colors.blue,
+  );
+}
+
+@Preview(name: 'CustomButtonDisabled')
+Widget previewCustomButtonDisabled() {
+  return i0.CustomButton(
+    text: 'Disabled',
+    onPressed: null,
+    color: Colors.grey,
+  );
+}
+```
+
+Remember: SIMPLICITY IS KEY. Focus on creating simple, compilable previews with realistic parameters. Most widgets will only need one preview. Only add complexity if you are 100% certain it will work. When in doubt, keep it simple and functional.
+
+
+#########################
+USER
+#########################
+### Available Context Files:
+
+### main.dart (always included for app setup reference):
+```dart
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/auth/auth_manager.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/firebase_options.dart';
+
+import './presentation/app/game_app.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  final authManager = FirebaseAuthManager(FirebaseAuth.instance);
+  await authManager.ensureAuthenticated();
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        authManagerProvider.overrideWithValue(authManager),
+      ],
+      child: const GameApp(),
+    ),
+  );
+}
+
+```
+
+### Additional Referencible Files:
+
+#### presentation/features/game/controllers/offline_match_controller.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/board_position.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
+import 'package:not_so_tic_tac_toe_game/domain/exceptions/invalid_move_exception.dart';
+
+class OfflineMatchState {
+  const OfflineMatchState({
+    required this.game,
+    required this.round,
+    required this.nextStartingPlayer,
+  });
+
+  final TicTacToeGame game;
+  final int round;
+  final PlayerMark nextStartingPlayer;
+
+  OfflineMatchState copyWith({
+    TicTacToeGame? game,
+    int? round,
+    PlayerMark? nextStartingPlayer,
+  }) {
+    return OfflineMatchState(
+      game: game ?? this.game,
+      round: round ?? this.round,
+      nextStartingPlayer: nextStartingPlayer ?? this.nextStartingPlayer,
+    );
+  }
+}
+
+class OfflineMatchController extends Notifier<OfflineMatchState?> {
+  @override
+  OfflineMatchState? build() => null;
+
+  void startNewMatch({PlayerMark? startingPlayer}) {
+    final resolvedStarter =
+        startingPlayer ?? state?.nextStartingPlayer ?? PlayerMark.x;
+    final nextStarter = resolvedStarter.opponent;
+    final round = (state?.round ?? 0) + 1;
+
+    state = OfflineMatchState(
+      game: TicTacToeGame.newGame(startingPlayer: resolvedStarter),
+      round: round,
+      nextStartingPlayer: nextStarter,
+    );
+  }
+
+  void playMove(BoardPosition position) {
+    final current = state;
+    if (current == null) {
+      return;
+    }
+
+    try {
+      final updatedGame = current.game.playMove(position);
+      state = current.copyWith(game: updatedGame);
+    } on InvalidMoveException {
+      // Ignore invalid local taps so the board feels responsive.
+    }
+  }
+
+  void rematch() {
+    final nextStarter = state?.nextStartingPlayer ?? PlayerMark.x;
+    startNewMatch(startingPlayer: nextStarter);
+  }
+
+  void exitToMenu() {
+    state = null;
+  }
+}
+
+final offlineMatchControllerProvider =
+    NotifierProvider<OfflineMatchController, OfflineMatchState?>(
+  OfflineMatchController.new,
+);
+```
+#### presentation/features/game/controllers/game_controller.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/board_position.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
+import 'package:not_so_tic_tac_toe_game/domain/exceptions/invalid_move_exception.dart';
+
+class GameController extends Notifier<TicTacToeGame> {
+  @override
+  TicTacToeGame build() => TicTacToeGame.newGame();
+
+  void playAt(BoardPosition position) {
+    try {
+      state = state.playMove(position);
+    } on InvalidMoveException {
+      // Ignore invalid interactions; UI can decide to surface feedback later.
+    }
+  }
+
+  void reset() {
+    state = TicTacToeGame.newGame(
+      startingPlayer: state.startingPlayer.opponent,
+    );
+  }
+}
+
+final gameControllerProvider = NotifierProvider<GameController, TicTacToeGame>(
+  GameController.new,
+);
+```
+#### presentation/features/game/controllers/matchmaking_controller.dart:
+```dart
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/matchmaking_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/value_objects/match_join_result.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
+
+enum MatchmakingPhase { idle, searching, connecting, matchReady, error }
+
+class MatchmakingState {
+  const MatchmakingState({
+    required this.phase,
+    this.assignedMatchId,
+    this.errorMessage,
+  });
+
+  const MatchmakingState.idle() : this(phase: MatchmakingPhase.idle);
+
+  const MatchmakingState.searching()
+      : this(phase: MatchmakingPhase.searching);
+
+  const MatchmakingState.connecting(String matchId)
+      : this(
+          phase: MatchmakingPhase.connecting,
+          assignedMatchId: matchId,
+        );
+
+  final MatchmakingPhase phase;
+  final String? assignedMatchId;
+  final String? errorMessage;
+
+  MatchmakingState copyWith({
+    MatchmakingPhase? phase,
+    Object? assignedMatchId = _sentinel,
+    Object? errorMessage = _sentinel,
+  }) {
+    return MatchmakingState(
+      phase: phase ?? this.phase,
+      assignedMatchId: identical(assignedMatchId, _sentinel)
+          ? this.assignedMatchId
+          : assignedMatchId as String?,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
+    );
+  }
+
+  static const _sentinel = Object();
+}
+
+class MatchmakingController extends Notifier<MatchmakingState> {
+  MatchmakingRepository get _repository =>
+      ref.read(matchmakingRepositoryProvider);
+
+  String get _playerId => ref.read(playerIdProvider);
+
+  int _operationToken = 0;
+
+  @override
+  MatchmakingState build() {
+    ref.listen<AsyncValue<MatchState?>>(
+      activeMatchProvider,
+      (_, next) {
+        next.whenData((match) {
+          if (match != null) {
+            state = state.copyWith(
+              phase: MatchmakingPhase.matchReady,
+              assignedMatchId: match.id,
+              errorMessage: null,
+            );
+          } else if (state.phase == MatchmakingPhase.matchReady) {
+            state = const MatchmakingState.idle();
+          }
+        });
+      },
+    );
+
+    ref.onDispose(() {
+      if (state.phase == MatchmakingPhase.searching) {
+        unawaited(_repository.leaveQueue(_playerId));
+      }
+    });
+
+    return const MatchmakingState.idle();
+  }
+
+  Future<void> startSearch() async {
+    if (state.phase == MatchmakingPhase.searching ||
+        state.phase == MatchmakingPhase.connecting) {
+      return;
+    }
+
+    final currentToken = ++_operationToken;
+    state = const MatchmakingState.searching();
+
+    try {
+      final result = await _repository.joinQueue(_playerId);
+      if (currentToken != _operationToken) return;
+
+      switch (result.status) {
+        case MatchJoinStatus.waiting:
+          state = const MatchmakingState.searching();
+          break;
+        case MatchJoinStatus.matchReady:
+        case MatchJoinStatus.alreadyInMatch:
+          final matchId = result.matchId;
+          if (matchId != null) {
+            state = MatchmakingState.connecting(matchId);
+          }
+          break;
+      }
+    } catch (error) {
+      if (currentToken != _operationToken) return;
+      state = MatchmakingState(
+        phase: MatchmakingPhase.error,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+
+  Future<void> cancelSearch() async {
+    if (state.phase != MatchmakingPhase.searching) return;
+
+    final currentToken = ++_operationToken;
+    state = const MatchmakingState.idle();
+
+    try {
+      await _repository.leaveQueue(_playerId);
+    } finally {
+      if (currentToken == _operationToken) {
+        state = const MatchmakingState.idle();
+      }
+    }
+  }
+
+  Future<void> leaveMatch(String matchId) async {
+    final matchRepository = ref.read(matchRepositoryProvider);
+
+    final currentToken = ++_operationToken;
+    await matchRepository.leaveMatch(
+      matchId: matchId,
+      playerId: _playerId,
+    );
+
+    ref.invalidate(activeMatchProvider);
+    if (currentToken == _operationToken) {
+      state = const MatchmakingState.idle();
+    }
+  }
+
+  Future<void> playAgain(String matchId) async {
+    await leaveMatch(matchId);
+    await startSearch();
+  }
+}
+
+final matchmakingControllerProvider =
+    NotifierProvider<MatchmakingController, MatchmakingState>(
+  MatchmakingController.new,
+);
+```
+#### presentation/features/game/controllers/remote_match_providers.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
+
+final activeMatchProvider = StreamProvider<MatchState?>((ref) {
+  final repository = ref.watch(matchRepositoryProvider);
+  final playerId = ref.watch(playerIdProvider);
+  return repository.watchActiveMatch(playerId: playerId);
+});
+```
+#### presentation/features/player/controllers/player_profile_providers.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_profile.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/player_profile_repository.dart';
+
+final _playerProfileInitializationProvider = FutureProvider<void>((ref) async {
+  final repository = ref.watch(playerProfileRepositoryProvider);
+  final playerId = ref.watch(playerIdProvider);
+  await repository.ensureProfileInitialized(playerId: playerId);
+});
+
+final playerProfileProvider = StreamProvider<PlayerProfile>((ref) {
+  // Ensure the profile document exists before subscribing to changes.
+  ref.watch(_playerProfileInitializationProvider);
+  final repository = ref.watch(playerProfileRepositoryProvider);
+  final playerId = ref.watch(playerIdProvider);
+  return repository.watchProfile(playerId: playerId);
+});
+```
+
+### Available Files in Project:
+- main.dart
+- data/matchmaking/firebase_matchmaking_repository.dart
+- data/matchmaking/firebase_match_repository.dart
+- data/modifiers/stub_modifiers.dart
+- data/player/firebase_player_profile_repository.dart
+- presentation/app/game_app.dart
+- presentation/features/highlights/highlight_recorder.dart
+- presentation/features/highlights/highlight_share_target.dart
+- presentation/features/game/widgets/game_status_banner.dart
+- presentation/features/game/widgets/ultimate_mode_board.dart
+- presentation/features/game/widgets/modifier_category_reveal.dart
+- presentation/features/game/widgets/tic_tac_toe_board.dart
+- presentation/features/game/pages/game_home_page.dart
+- presentation/features/game/controllers/offline_match_controller.dart
+- presentation/features/game/controllers/game_controller.dart
+- presentation/features/game/controllers/matchmaking_controller.dart
+- presentation/features/game/controllers/match_highlight_controller.dart
+- presentation/features/game/controllers/remote_match_providers.dart
+- presentation/features/player/widgets/player_streak_badge.dart
+- presentation/features/player/controllers/player_profile_providers.dart
+- auth/auth_manager.dart
+- firebase_options.dart
+- core/theme/app_theme.dart
+- core/di/providers.dart
+- domain/modifiers/game_modifier.dart
+- domain/modifiers/modifier_algorithms.dart
+- domain/modifiers/modifier_category.dart
+- domain/modifiers/modifier_registry.dart
+- domain/value_objects/match_join_result.dart
+- domain/repositories/player_profile_repository.dart
+- domain/repositories/matchmaking_repository.dart
+- domain/repositories/match_repository.dart
+- domain/entities/game_status.dart
+- domain/entities/player_profile.dart
+- domain/entities/player_mark.dart
+- domain/entities/ultimate_board_state.dart
+- domain/entities/match_state.dart
+- domain/entities/tic_tac_toe_game.dart
+- domain/entities/board_position.dart
+- domain/exceptions/invalid_move_exception.dart
+
+### Package Information:
+- Package name: not_so_tic_tac_toe_game
+
+## Instructions for this specific task:
+- PRIORITY: Ensure the code compiles correctly - simplicity over complexity
+- Analyze the provided widget code below to identify all widgets
+- For each widget, create ONE preview function with realistic default parameters
+- ONLY create additional variants if the widget has different constructor parameters that produce visually different results
+- DO NOT create variants for internal state, counter values, form states, or user interactions
+- Copy imports EXACTLY from the reference widget file imports above, adding proper aliasing (as i0, as i1, etc.)
+- If you see provider setup in the context files, copy that pattern exactly for any provider usage
+- NEVER import files that are not shown in the context above
+- NEVER call methods unless you are certain they exist from the provided context
+- NEVER create any code outside the @Preview functions - no classes, widgets, or helper functions
+
+## CRITICAL: Choose ONE of these two responses:
+
+**OPTION 1: Generate the complete preview file**
+- If you can create meaningful previews with the current context, respond with ONLY the raw Dart code
+- If you see imports in the widget code for files you need (models, services, other widgets), REQUEST THEM
+- When uncertain, either REQUEST the files you need OR choose the simpler approach that is guaranteed to compile
+- Do not include any explanations, markdown, or code blocks - just the preview file content
+
+**OPTION 2: Request additional files (RECOMMENDED when needed)**
+- If you see imports or dependencies that you need to understand (like custom models, services, or widgets)
+- Request files that exist in the available files list above
+- Respond with: REQUEST_FILES: file1.dart, file2.dart
+- This helps you create better previews with proper parameter types and realistic data
+
+## Widget Code to Analyze:
+File path: /hologram/data/workspace/project/lib/presentation/app/game_app.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/theme/app_theme.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/pages/game_home_page.dart';
+
+class GameApp extends ConsumerWidget {
+  const GameApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp(
+      title: 'Gridlock X & O Evolved',
+      theme: buildAppTheme(),
+      home: const GameHomePage(),
+    );
+  }
+}
+```
+
+## Current Preview File:
+```dart
+import 'package:flutter/widgets.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/app/game_app.dart' as i0;
+import 'package:flutter/foundation.dart' as i1;
+
+
+@Preview(name: 'GameApp')
+Widget previewGameApp() {
+  return i0.GameApp(
+    key: /* TODO: provide optional Key value for key: */ i1.Key(
+      /* TODO: provide String value for value: */ '',
+    ),
+  );
+}
+
+
+```
+
+Generate the complete preview file content focusing on parameter-driven configurations only. Do not include any code blocks or markdown formatting in your response - just the raw Dart code.
+#########################
+ASSISTANT
+#########################
+import 'package:flutter/material.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/app/game_app.dart' as i0;
+import 'package:flutter/foundation.dart' as i1;
+
+@Preview(name: 'GameApp')
+Widget previewGameApp() {
+  return const i0.GameApp();
+}

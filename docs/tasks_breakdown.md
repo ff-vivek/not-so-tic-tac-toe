@@ -75,7 +75,7 @@ This breakdown translates the PRD into actionable tasks for sprint planning.
 *Goal: Build the foundational server-side services and database architecture.*
 
 * **User Story 4.1:** As a user, I want to create an account so that my progress and purchases are saved.
-    * **Task:** Set up a cloud database (e.g., Firestore, PostgreSQL).
+    * **Task:** Set up a cloud database (e.g., Firestore).
     * **Task:** Design the `Players` schema (PlayerID, AuthDetails, Stats, Currency, Inventory).
     * **Task:** Implement an authentication service supporting social logins (Google, Apple).
     * **Task:** Create API endpoints for player login, registration, and profile fetching.

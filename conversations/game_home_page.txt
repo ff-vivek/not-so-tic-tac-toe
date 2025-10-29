@@ -1,0 +1,2188 @@
+SYSTEM_PROMPT
+You are an expert Flutter developer working with Dreamflow, a visual Flutter development platform.
+Your task is to generate preview functions for widgets to enable isolated rendering and testing.
+
+## Your Role
+Generate complete preview files that contain functions annotated with @Preview to showcase widgets in isolation. These previews help developers visualize and test individual widgets with realistic, meaningful parameter configurations.
+
+## IMPORTANT: App Context is Automatically Provided
+Your preview widgets will be automatically wrapped in the same app structure as main.dart when they run. This means:
+- All providers, themes, and app-level services are available
+- You can use Theme.of(context), Provider.of(context), etc. normally
+- No need to set up MaterialApp, providers, or other app-level configuration that are in main.dart
+
+Focus ONLY on the widget's own constructor parameters and immediate functionality.
+
+## Preview Structure
+Each preview function follows this pattern:
+```dart
+@Preview(name: 'WidgetName')
+Widget previewWidgetName() {
+  return i0.WidgetName(
+    // Realistic default parameters here
+  );
+}
+```
+
+## Key Requirements
+
+1. **Analyze Each Widget**: For each StatelessWidget, StatefulWidget, or widget-returning function in the provided code:
+   - Create AT LEAST one preview function per widget
+   - ONLY include widgets that are actual classes (extend StatelessWidget, StatefulWidget, or the like)
+   - NEVER include private methods as these previews will live in a separate file
+   - Use realistic, meaningful default values for ALL required parameters
+   - ONLY create multiple variants when the widget has DIFFERENT CONSTRUCTOR PARAMETERS that produce meaningfully different visual outputs
+   - NEVER create variants for internal widget state (like counter values, form state, etc.)
+   - NEVER create variants for widgets defined in different any other file but the one specified
+
+2. **Parameter-Driven Variants Only**:
+   - Variants should ONLY be based on different parameter values passed to the constructor
+   - Examples of GOOD variants:
+     * Button with different variants (primary, secondary, outline) via enum parameter
+     * Card with/without optional image parameter
+     * List widget with different data sets (empty vs populated)
+     * Widget with different named constructors (Widget.small(), Widget.large())
+   - Examples of BAD variants (DO NOT CREATE):
+     * Counter widget with different counter values (internal state)
+     * Form widget with filled vs empty fields (internal state)
+     * Loading states that aren't controlled by parameters
+
+3. **Parameter Guidelines**:
+   - Use realistic data that showcases the widget's actual purpose
+   - For text parameters: use descriptive, contextual strings (e.g., "John Doe", "Welcome to our app")
+   - For numeric parameters: use sensible defaults (e.g., padding: 16.0, count: 3)
+   - For lists: provide 2-4 sample items that demonstrate functionality
+   - For callbacks: provide simple implementations like `() { print('Button pressed'); }`
+   - For enums: choose the most common/default value, create variants for other enum values if visually different
+   - For optional parameters: provide meaningful values, not just nulls
+
+4. **When NOT to Create Variants**:
+   - Do NOT create variants for StatefulWidget internal state changes
+   - Do NOT simulate user interactions or form states
+   - Do NOT create variants for loading/error states unless controlled by constructor parameters
+   - If a widget only has one meaningful parameter configuration, create only one preview
+
+5. **Code Quality and Safety (CRITICAL - PRIORITIZE COMPILATION)**:
+   - **SIMPLICITY OVER COMPLEXITY**: Always choose the simplest approach that compiles correctly
+   - **COMPILATION FIRST**: Only add code if you are 100% certain it will compile and work
+   - **NO CODE OUTSIDE PREVIEW FUNCTIONS**: Never create classes, widgets, helper functions, or variables outside the @Preview functions
+   - **KEEP EVERYTHING INSIDE**: All code must be contained within the preview function body
+   - Copy imports EXACTLY as they appear in the reference widget file, but add proper aliasing (as i0, as i1, etc.)
+   - NEVER import any file unless you have seen it in the provided context files
+   - NEVER call methods on classes unless you are absolutely certain they exist from the provided code or your Dart/Flutter knowledge
+   - NEVER populate any dummy data outside of that passed in DIRECTLY in the constructor parameters
+   - When in doubt, omit extraneous code rather than guessing - simplicity is better
+   - Use proper Dart formatting and conventions
+   - Make the code immediately runnable with only the provided context
+
+6. **Output Format**:
+   Generate the complete preview file content, including:
+   - All necessary imports with proper aliasing
+   - All preview functions for the widgets found
+   - Proper formatting and indentation
+
+## Example Output Structure:
+```dart
+import 'package:flutter/material.dart';
+import 'package:your_package/widgets.dart' as i0;
+
+@Preview(name: 'CustomButton')
+Widget previewCustomButton() {
+  return i0.CustomButton(
+    text: 'Save Changes',
+    onPressed: () {
+      print('Button pressed');
+    },
+    color: Colors.blue,
+  );
+}
+
+@Preview(name: 'CustomButtonDisabled')
+Widget previewCustomButtonDisabled() {
+  return i0.CustomButton(
+    text: 'Disabled',
+    onPressed: null,
+    color: Colors.grey,
+  );
+}
+```
+
+Remember: SIMPLICITY IS KEY. Focus on creating simple, compilable previews with realistic parameters. Most widgets will only need one preview. Only add complexity if you are 100% certain it will work. When in doubt, keep it simple and functional.
+
+
+#########################
+USER
+#########################
+### Available Context Files:
+
+### main.dart (always included for app setup reference):
+```dart
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/auth/auth_manager.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/firebase_options.dart';
+
+import './presentation/app/game_app.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  final authManager = FirebaseAuthManager(FirebaseAuth.instance);
+  await authManager.ensureAuthenticated();
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        authManagerProvider.overrideWithValue(authManager),
+      ],
+      child: const GameApp(),
+    ),
+  );
+}
+
+```
+
+### Additional Referencible Files:
+
+#### presentation/features/game/controllers/offline_match_controller.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/board_position.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
+import 'package:not_so_tic_tac_toe_game/domain/exceptions/invalid_move_exception.dart';
+
+class OfflineMatchState {
+  const OfflineMatchState({
+    required this.game,
+    required this.round,
+    required this.nextStartingPlayer,
+  });
+
+  final TicTacToeGame game;
+  final int round;
+  final PlayerMark nextStartingPlayer;
+
+  OfflineMatchState copyWith({
+    TicTacToeGame? game,
+    int? round,
+    PlayerMark? nextStartingPlayer,
+  }) {
+    return OfflineMatchState(
+      game: game ?? this.game,
+      round: round ?? this.round,
+      nextStartingPlayer: nextStartingPlayer ?? this.nextStartingPlayer,
+    );
+  }
+}
+
+class OfflineMatchController extends Notifier<OfflineMatchState?> {
+  @override
+  OfflineMatchState? build() => null;
+
+  void startNewMatch({PlayerMark? startingPlayer}) {
+    final resolvedStarter =
+        startingPlayer ?? state?.nextStartingPlayer ?? PlayerMark.x;
+    final nextStarter = resolvedStarter.opponent;
+    final round = (state?.round ?? 0) + 1;
+
+    state = OfflineMatchState(
+      game: TicTacToeGame.newGame(startingPlayer: resolvedStarter),
+      round: round,
+      nextStartingPlayer: nextStarter,
+    );
+  }
+
+  void playMove(BoardPosition position) {
+    final current = state;
+    if (current == null) {
+      return;
+    }
+
+    try {
+      final updatedGame = current.game.playMove(position);
+      state = current.copyWith(game: updatedGame);
+    } on InvalidMoveException {
+      // Ignore invalid local taps so the board feels responsive.
+    }
+  }
+
+  void rematch() {
+    final nextStarter = state?.nextStartingPlayer ?? PlayerMark.x;
+    startNewMatch(startingPlayer: nextStarter);
+  }
+
+  void exitToMenu() {
+    state = null;
+  }
+}
+
+final offlineMatchControllerProvider =
+    NotifierProvider<OfflineMatchController, OfflineMatchState?>(
+  OfflineMatchController.new,
+);
+```
+#### presentation/features/game/controllers/game_controller.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/board_position.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart';
+import 'package:not_so_tic_tac_toe_game/domain/exceptions/invalid_move_exception.dart';
+
+class GameController extends Notifier<TicTacToeGame> {
+  @override
+  TicTacToeGame build() => TicTacToeGame.newGame();
+
+  void playAt(BoardPosition position) {
+    try {
+      state = state.playMove(position);
+    } on InvalidMoveException {
+      // Ignore invalid interactions; UI can decide to surface feedback later.
+    }
+  }
+
+  void reset() {
+    state = TicTacToeGame.newGame(
+      startingPlayer: state.startingPlayer.opponent,
+    );
+  }
+}
+
+final gameControllerProvider = NotifierProvider<GameController, TicTacToeGame>(
+  GameController.new,
+);
+```
+#### presentation/features/game/controllers/matchmaking_controller.dart:
+```dart
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/matchmaking_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/value_objects/match_join_result.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
+
+enum MatchmakingPhase { idle, searching, connecting, matchReady, error }
+
+class MatchmakingState {
+  const MatchmakingState({
+    required this.phase,
+    this.assignedMatchId,
+    this.errorMessage,
+  });
+
+  const MatchmakingState.idle() : this(phase: MatchmakingPhase.idle);
+
+  const MatchmakingState.searching()
+      : this(phase: MatchmakingPhase.searching);
+
+  const MatchmakingState.connecting(String matchId)
+      : this(
+          phase: MatchmakingPhase.connecting,
+          assignedMatchId: matchId,
+        );
+
+  final MatchmakingPhase phase;
+  final String? assignedMatchId;
+  final String? errorMessage;
+
+  MatchmakingState copyWith({
+    MatchmakingPhase? phase,
+    Object? assignedMatchId = _sentinel,
+    Object? errorMessage = _sentinel,
+  }) {
+    return MatchmakingState(
+      phase: phase ?? this.phase,
+      assignedMatchId: identical(assignedMatchId, _sentinel)
+          ? this.assignedMatchId
+          : assignedMatchId as String?,
+      errorMessage: identical(errorMessage, _sentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
+    );
+  }
+
+  static const _sentinel = Object();
+}
+
+class MatchmakingController extends Notifier<MatchmakingState> {
+  MatchmakingRepository get _repository =>
+      ref.read(matchmakingRepositoryProvider);
+
+  String get _playerId => ref.read(playerIdProvider);
+
+  int _operationToken = 0;
+
+  @override
+  MatchmakingState build() {
+    ref.listen<AsyncValue<MatchState?>>(
+      activeMatchProvider,
+      (_, next) {
+        next.whenData((match) {
+          if (match != null) {
+            state = state.copyWith(
+              phase: MatchmakingPhase.matchReady,
+              assignedMatchId: match.id,
+              errorMessage: null,
+            );
+          } else if (state.phase == MatchmakingPhase.matchReady) {
+            state = const MatchmakingState.idle();
+          }
+        });
+      },
+    );
+
+    ref.onDispose(() {
+      if (state.phase == MatchmakingPhase.searching) {
+        unawaited(_repository.leaveQueue(_playerId));
+      }
+    });
+
+    return const MatchmakingState.idle();
+  }
+
+  Future<void> startSearch() async {
+    if (state.phase == MatchmakingPhase.searching ||
+        state.phase == MatchmakingPhase.connecting) {
+      return;
+    }
+
+    final currentToken = ++_operationToken;
+    state = const MatchmakingState.searching();
+
+    try {
+      final result = await _repository.joinQueue(_playerId);
+      if (currentToken != _operationToken) return;
+
+      switch (result.status) {
+        case MatchJoinStatus.waiting:
+          state = const MatchmakingState.searching();
+          break;
+        case MatchJoinStatus.matchReady:
+        case MatchJoinStatus.alreadyInMatch:
+          final matchId = result.matchId;
+          if (matchId != null) {
+            state = MatchmakingState.connecting(matchId);
+          }
+          break;
+      }
+    } catch (error) {
+      if (currentToken != _operationToken) return;
+      state = MatchmakingState(
+        phase: MatchmakingPhase.error,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+
+  Future<void> cancelSearch() async {
+    if (state.phase != MatchmakingPhase.searching) return;
+
+    final currentToken = ++_operationToken;
+    state = const MatchmakingState.idle();
+
+    try {
+      await _repository.leaveQueue(_playerId);
+    } finally {
+      if (currentToken == _operationToken) {
+        state = const MatchmakingState.idle();
+      }
+    }
+  }
+
+  Future<void> leaveMatch(String matchId) async {
+    final matchRepository = ref.read(matchRepositoryProvider);
+
+    final currentToken = ++_operationToken;
+    await matchRepository.leaveMatch(
+      matchId: matchId,
+      playerId: _playerId,
+    );
+
+    ref.invalidate(activeMatchProvider);
+    if (currentToken == _operationToken) {
+      state = const MatchmakingState.idle();
+    }
+  }
+
+  Future<void> playAgain(String matchId) async {
+    await leaveMatch(matchId);
+    await startSearch();
+  }
+}
+
+final matchmakingControllerProvider =
+    NotifierProvider<MatchmakingController, MatchmakingState>(
+  MatchmakingController.new,
+);
+```
+#### presentation/features/game/controllers/remote_match_providers.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
+
+final activeMatchProvider = StreamProvider<MatchState?>((ref) {
+  final repository = ref.watch(matchRepositoryProvider);
+  final playerId = ref.watch(playerIdProvider);
+  return repository.watchActiveMatch(playerId: playerId);
+});
+```
+#### presentation/features/player/controllers/player_profile_providers.dart:
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_profile.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/player_profile_repository.dart';
+
+final _playerProfileInitializationProvider = FutureProvider<void>((ref) async {
+  final repository = ref.watch(playerProfileRepositoryProvider);
+  final playerId = ref.watch(playerIdProvider);
+  await repository.ensureProfileInitialized(playerId: playerId);
+});
+
+final playerProfileProvider = StreamProvider<PlayerProfile>((ref) {
+  // Ensure the profile document exists before subscribing to changes.
+  ref.watch(_playerProfileInitializationProvider);
+  final repository = ref.watch(playerProfileRepositoryProvider);
+  final playerId = ref.watch(playerIdProvider);
+  return repository.watchProfile(playerId: playerId);
+});
+```
+
+### Available Files in Project:
+- main.dart
+- data/matchmaking/firebase_matchmaking_repository.dart
+- data/matchmaking/firebase_match_repository.dart
+- data/modifiers/stub_modifiers.dart
+- data/player/firebase_player_profile_repository.dart
+- presentation/app/game_app.dart
+- presentation/features/highlights/highlight_recorder.dart
+- presentation/features/highlights/highlight_share_target.dart
+- presentation/features/game/widgets/game_status_banner.dart
+- presentation/features/game/widgets/ultimate_mode_board.dart
+- presentation/features/game/widgets/modifier_category_reveal.dart
+- presentation/features/game/widgets/tic_tac_toe_board.dart
+- presentation/features/game/pages/game_home_page.dart
+- presentation/features/game/controllers/offline_match_controller.dart
+- presentation/features/game/controllers/game_controller.dart
+- presentation/features/game/controllers/matchmaking_controller.dart
+- presentation/features/game/controllers/match_highlight_controller.dart
+- presentation/features/game/controllers/remote_match_providers.dart
+- presentation/features/player/widgets/player_streak_badge.dart
+- presentation/features/player/controllers/player_profile_providers.dart
+- auth/auth_manager.dart
+- firebase_options.dart
+- core/theme/app_theme.dart
+- core/di/providers.dart
+- domain/modifiers/game_modifier.dart
+- domain/modifiers/modifier_algorithms.dart
+- domain/modifiers/modifier_category.dart
+- domain/modifiers/modifier_registry.dart
+- domain/value_objects/match_join_result.dart
+- domain/repositories/player_profile_repository.dart
+- domain/repositories/matchmaking_repository.dart
+- domain/repositories/match_repository.dart
+- domain/entities/game_status.dart
+- domain/entities/player_profile.dart
+- domain/entities/player_mark.dart
+- domain/entities/ultimate_board_state.dart
+- domain/entities/match_state.dart
+- domain/entities/tic_tac_toe_game.dart
+- domain/entities/board_position.dart
+- domain/exceptions/invalid_move_exception.dart
+
+### Package Information:
+- Package name: not_so_tic_tac_toe_game
+
+## Instructions for this specific task:
+- PRIORITY: Ensure the code compiles correctly - simplicity over complexity
+- Analyze the provided widget code below to identify all widgets
+- For each widget, create ONE preview function with realistic default parameters
+- ONLY create additional variants if the widget has different constructor parameters that produce visually different results
+- DO NOT create variants for internal state, counter values, form states, or user interactions
+- Copy imports EXACTLY from the reference widget file imports above, adding proper aliasing (as i0, as i1, etc.)
+- If you see provider setup in the context files, copy that pattern exactly for any provider usage
+- NEVER import files that are not shown in the context above
+- NEVER call methods unless you are certain they exist from the provided context
+- NEVER create any code outside the @Preview functions - no classes, widgets, or helper functions
+
+## CRITICAL: Choose ONE of these two responses:
+
+**OPTION 1: Generate the complete preview file**
+- If you can create meaningful previews with the current context, respond with ONLY the raw Dart code
+- If you see imports in the widget code for files you need (models, services, other widgets), REQUEST THEM
+- When uncertain, either REQUEST the files you need OR choose the simpler approach that is guaranteed to compile
+- Do not include any explanations, markdown, or code blocks - just the preview file content
+
+**OPTION 2: Request additional files (RECOMMENDED when needed)**
+- If you see imports or dependencies that you need to understand (like custom models, services, or widgets)
+- Request files that exist in the available files list above
+- Respond with: REQUEST_FILES: file1.dart, file2.dart
+- This helps you create better previews with proper parameter types and realistic data
+
+## Widget Code to Analyze:
+File path: /hologram/data/workspace/project/lib/presentation/features/game/pages/game_home_page.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/board_position.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart';
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/match_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/match_highlight_controller.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/matchmaking_controller.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/offline_match_controller.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/remote_match_providers.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/game_status_banner.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/tic_tac_toe_board.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/ultimate_mode_board.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/modifier_category_reveal.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/player/controllers/player_profile_providers.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/player/widgets/player_streak_badge.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/highlights/highlight_share_target.dart';
+
+class GameHomePage extends ConsumerWidget {
+  const GameHomePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matchmakingState = ref.watch(matchmakingControllerProvider);
+    final activeMatch = ref.watch(activeMatchProvider);
+    final playerId = ref.watch(playerIdProvider);
+    final offlineMatch = ref.watch(offlineMatchControllerProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Gridlock X & O Evolved'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: offlineMatch != null
+            ? _OfflineMatchView(state: offlineMatch)
+            : activeMatch.when(
+                data: (match) {
+                  if (match != null) {
+                    return _MatchView(
+                      match: match,
+                      playerId: playerId,
+                    );
+                  }
+
+                  switch (matchmakingState.phase) {
+                    case MatchmakingPhase.searching:
+                      return const _SearchingView();
+                    case MatchmakingPhase.connecting:
+                      return _ConnectingView(
+                        opponentMatchId: matchmakingState.assignedMatchId,
+                      );
+                    case MatchmakingPhase.error:
+                      return _ErrorView(message: matchmakingState.errorMessage);
+                    case MatchmakingPhase.matchReady:
+                    case MatchmakingPhase.idle:
+                      return const _IdleView();
+                  }
+                },
+                loading: () {
+                  switch (matchmakingState.phase) {
+                    case MatchmakingPhase.connecting:
+                      return _ConnectingView(
+                        opponentMatchId: matchmakingState.assignedMatchId,
+                      );
+                    case MatchmakingPhase.searching:
+                      return const _SearchingView();
+                    case MatchmakingPhase.error:
+                    case MatchmakingPhase.matchReady:
+                    case MatchmakingPhase.idle:
+                      return const Center(child: CircularProgressIndicator());
+                  }
+                },
+                error: (error, _) => _ErrorView(message: error.toString()),
+              ),
+      ),
+    );
+  }
+}
+
+class _IdleView extends ConsumerWidget {
+  const _IdleView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(matchmakingControllerProvider.notifier);
+    final offlineController = ref.read(offlineMatchControllerProvider.notifier);
+    final profileAsync = ref.watch(playerProfileProvider);
+
+    Widget? streakBadge;
+    profileAsync.when(
+      data: (profile) {
+        streakBadge = PlayerStreakBadge(
+          profile: profile,
+          showMaxLabel: true,
+        );
+      },
+      loading: () {
+        streakBadge = const SizedBox(
+          height: 64,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      },
+      error: (error, _) {
+        streakBadge = Tooltip(
+          message: 'Unable to load streak data: $error',
+          child: const Icon(Icons.local_fire_department_outlined),
+        );
+      },
+    );
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (streakBadge != null) ...[
+            streakBadge!,
+            const SizedBox(height: 24),
+          ],
+          Text(
+            'Ready to Gridlock?',
+            style: Theme.of(context)
+                .textTheme
+                .headlineMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Tap play and we’ll find an opponent instantly.',
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          FilledButton.icon(
+            onPressed: controller.startSearch,
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: const Text('Play'),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => offlineController.startNewMatch(),
+            icon: const Icon(Icons.sports_esports_rounded),
+            label: const Text('Local Versus'),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Two players, one device. Take turns placing marks offline.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchingView extends ConsumerWidget {
+  const _SearchingView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(matchmakingControllerProvider.notifier);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(
+            'Searching for an opponent...',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 24),
+          OutlinedButton(
+            onPressed: controller.cancelSearch,
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConnectingView extends StatelessWidget {
+  const _ConnectingView({this.opponentMatchId});
+
+  final String? opponentMatchId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 64,
+            height: 64,
+            child: Stack(
+              alignment: Alignment.center,
+              children: const [
+                CircularProgressIndicator(strokeWidth: 6),
+                Icon(Icons.groups_rounded, size: 28),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Opponent locked in!',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Setting the board - you'll be dropped into the match shortly.",
+            style: theme.textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          if (opponentMatchId != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Match ID ${opponentMatchId!}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          Tooltip(
+            message: 'Matches are already syncing, so cancelling now could orphan the lobby.',
+            triggerMode: TooltipTriggerMode.tap,
+            child: OutlinedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.hourglass_bottom_rounded),
+              label: const Text('Preparing match...'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorView extends ConsumerWidget {
+  const _ErrorView({required this.message});
+
+  final String? message;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(matchmakingControllerProvider.notifier);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+          const SizedBox(height: 12),
+          Text(
+            'Something went wrong.',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          if (message != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              message!,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: controller.startSearch,
+            child: const Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OfflineMatchView extends ConsumerWidget {
+  const _OfflineMatchView({required this.state});
+
+  final OfflineMatchState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(offlineMatchControllerProvider.notifier);
+    final onExit = controller.exitToMenu;
+    final onRematch = controller.rematch;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _OfflineStatusBanner(
+          state: state,
+          onExit: onExit,
+          onRematch: onRematch,
+        ),
+        const SizedBox(height: 24),
+        Expanded(
+          child: TicTacToeBoard(
+            game: state.game,
+            onCellSelected: (position) => controller.playMove(position),
+            canSelectCell: (position) => state.game.canPlayAt(position),
+            localPlayerMark: null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OfflineStatusBanner extends StatelessWidget {
+  const _OfflineStatusBanner({
+    required this.state,
+    required this.onExit,
+    required this.onRematch,
+  });
+
+  final OfflineMatchState state;
+  final VoidCallback onExit;
+  final VoidCallback onRematch;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final game = state.game;
+
+    final _BannerDetails details = _resolveDetails(theme);
+
+    final actions = <Widget>[
+      OutlinedButton.icon(
+        onPressed: onExit,
+        icon: const Icon(Icons.home_rounded),
+        label: const Text('Return to Menu'),
+      ),
+    ];
+
+    if (game.status != GameStatus.inProgress) {
+      actions.insert(
+        0,
+        FilledButton.icon(
+          onPressed: onRematch,
+          icon: const Icon(Icons.refresh_rounded),
+          label: Text('Rematch (${_playerLabel(state.nextStartingPlayer)} starts)'),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: details.accentColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: details.accentColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(details.icon, color: details.accentColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      details.title,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: details.accentColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      details.subtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: details.accentColor.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Chip(
+                backgroundColor: details.accentColor.withOpacity(0.12),
+                label: Text(
+                  'Round ${state.round}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: details.accentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: actions,
+          ),
+        ],
+      ),
+    );
+  }
+
+  _BannerDetails _resolveDetails(ThemeData theme) {
+    final game = state.game;
+
+    switch (game.status) {
+      case GameStatus.inProgress:
+        final activeLabel = _playerLabel(game.activePlayer);
+        return _BannerDetails(
+          title: "$activeLabel's turn",
+          subtitle: 'Hand off the device and tap an open square to continue the duel.',
+          icon: Icons.sports_esports_rounded,
+          accentColor: theme.colorScheme.primary,
+        );
+      case GameStatus.won:
+        final winner = game.winner;
+        final winnerLabel = _playerLabel(winner!);
+        final nextLabel = _playerLabel(state.nextStartingPlayer);
+        return _BannerDetails(
+          title: '$winnerLabel wins!',
+          subtitle: 'Rematch ready - $nextLabel kicks off the next round.',
+          icon: Icons.emoji_events_rounded,
+          accentColor: theme.colorScheme.secondary,
+        );
+      case GameStatus.draw:
+        final nextLabel = _playerLabel(state.nextStartingPlayer);
+        return _BannerDetails(
+          title: 'Round ends in a draw',
+          subtitle: 'Rematch ready - $nextLabel opens the next round.',
+          icon: Icons.handshake_rounded,
+          accentColor: theme.colorScheme.tertiary,
+        );
+    }
+  }
+
+  static String _playerLabel(PlayerMark mark) {
+    return mark == PlayerMark.x ? 'Player X' : 'Player O';
+  }
+}
+
+class _BannerDetails {
+  const _BannerDetails({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accentColor,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accentColor;
+}
+
+class _MatchView extends ConsumerStatefulWidget {
+  const _MatchView({required this.match, required this.playerId});
+
+  final MatchState match;
+  final String playerId;
+
+  @override
+  ConsumerState<_MatchView> createState() => _MatchViewState();
+}
+
+class _MatchViewState extends ConsumerState<_MatchView> {
+  bool _categoryRevealComplete = true;
+  String? _revealSignature;
+  late GlobalKey _boardCaptureKey;
+  ProviderSubscription<MatchHighlightState>? _highlightSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _boardCaptureKey = GlobalKey(debugLabel: 'match-board-${widget.match.id}');
+    _resetRevealState();
+    _setupHighlightBindings();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MatchView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _resetRevealState(forceSetState: true);
+
+    if (oldWidget.match.id != widget.match.id) {
+      final oldController =
+          ref.read(matchHighlightControllerProvider(oldWidget.match.id).notifier);
+      oldController.detachBoundary(_boardCaptureKey);
+
+      setState(() {
+        _boardCaptureKey = GlobalKey(debugLabel: 'match-board-${widget.match.id}');
+      });
+
+      _setupHighlightBindings();
+    }
+  }
+
+  void _resetRevealState({bool forceSetState = false}) {
+    final category = widget.match.modifierCategory;
+    final signature =
+        category == null ? null : '${widget.match.id}-${category.storageValue}';
+
+    if (_revealSignature == signature) {
+      return;
+    }
+
+    void updater() {
+      _revealSignature = signature;
+      _categoryRevealComplete = category == null;
+    }
+
+    if (forceSetState) {
+      setState(updater);
+    } else {
+      updater();
+    }
+  }
+
+  void _handleRevealComplete() {
+    if (!_categoryRevealComplete) {
+      setState(() {
+        _categoryRevealComplete = true;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    ref.read(matchHighlightControllerProvider(widget.match.id).notifier)
+        .detachBoundary(_boardCaptureKey);
+    final subscription = _highlightSubscription;
+    if (subscription != null) {
+      // ignore: discarded_futures
+      subscription.close();
+      _highlightSubscription = null;
+    }
+    super.dispose();
+  }
+
+  void _setupHighlightBindings() {
+    final subscription = _highlightSubscription;
+    if (subscription != null) {
+      // ignore: discarded_futures
+      subscription.close();
+      _highlightSubscription = null;
+    }
+    _highlightSubscription = ref.listenManual<MatchHighlightState>(
+      matchHighlightControllerProvider(widget.match.id),
+      (previous, next) {
+        if (previous?.shareEventId == next.shareEventId) {
+          return;
+        }
+
+        if (!mounted) return;
+
+        if (next.shareState.isLoading) {
+          return;
+        }
+
+        if (next.shareState.hasError) {
+          final Object error = next.shareState.error ?? 'Unknown error';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Highlight share failed: $error')),
+          );
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Highlight exported. Check the share sheet!')),
+        );
+      },
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(matchHighlightControllerProvider(widget.match.id).notifier)
+          .attachBoundary(_boardCaptureKey);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final matchRepository = ref.read(matchRepositoryProvider);
+    final playerMark = widget.match.markForPlayer(widget.playerId);
+    final matchmakingController = ref.read(matchmakingControllerProvider.notifier);
+    final isGameComplete = widget.match.game.status != GameStatus.inProgress;
+    final highlightState = ref.watch(matchHighlightControllerProvider(widget.match.id));
+    final highlightController =
+        ref.read(matchHighlightControllerProvider(widget.match.id).notifier);
+    final ModifierCategory? modifierCategory = widget.match.modifierCategory;
+    final ultimateState = widget.match.ultimateState;
+    final playerProfileAsync = ref.watch(playerProfileProvider);
+
+    Widget? streakBadge;
+    playerProfileAsync.when(
+      data: (profile) {
+        streakBadge = Align(
+          alignment: Alignment.centerRight,
+          child: PlayerStreakBadge(
+            profile: profile,
+            dense: true,
+          ),
+        );
+      },
+      loading: () {
+        streakBadge = const Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+        );
+      },
+      error: (error, _) {
+        streakBadge = Align(
+          alignment: Alignment.centerRight,
+          child: Tooltip(
+            message: 'Streak unavailable: $error',
+            child: const Icon(Icons.local_fire_department_outlined),
+          ),
+        );
+      },
+    );
+
+    Widget boardWidget;
+    if (widget.match.isUltimateModeMatch && ultimateState != null) {
+      boardWidget = UltimateModeBoard(
+        state: ultimateState,
+        matchStatus: widget.match.status,
+        localPlayerMark: playerMark,
+        lastMove: ultimateState.lastMove,
+        onCellSelected: (position) => _playMove(
+          context,
+          matchRepository,
+          widget.match.id,
+          widget.playerId,
+          position,
+        ),
+        canSelectCell: (position) {
+          if (!_categoryRevealComplete) return false;
+          return widget.match.canPlayerSelectUltimateCell(
+            widget.playerId,
+            position,
+          );
+        },
+      );
+    } else if (widget.match.isUltimateModeMatch && ultimateState == null) {
+      boardWidget = const Center(child: CircularProgressIndicator());
+    } else {
+      boardWidget = TicTacToeBoard(
+        game: widget.match.game,
+        onCellSelected: (position) => _playMove(
+          context,
+          matchRepository,
+          widget.match.id,
+          widget.playerId,
+          position,
+        ),
+        localPlayerMark: playerMark,
+        canSelectCell: (position) {
+          if (!_categoryRevealComplete) return false;
+          return widget.match.canPlayerSelectCell(
+            widget.playerId,
+            position,
+          );
+        },
+        blockedPositions: widget.match.blockedPositions,
+        spinnerOptions: widget.match.spinnerOptions,
+        isSpinnerActive: _categoryRevealComplete &&
+            widget.match.modifierId == 'spinner' &&
+            widget.match.spinnerOptions.isNotEmpty &&
+            widget.match.game.status == GameStatus.inProgress,
+        isSpinnerTurnForLocalPlayer: _categoryRevealComplete &&
+            widget.match.modifierId == 'spinner' &&
+            widget.match.spinnerOptions.isNotEmpty &&
+            widget.match.isPlayerTurn(widget.playerId),
+        gravityDropPath: widget.match.gravityDropPath,
+      );
+    }
+
+    final List<Widget> postGameActions = <Widget>[];
+    if (isGameComplete) {
+      final String tooltipMessage = highlightState.shareState.isLoading
+          ? 'Rendering your highlight...'
+          : highlightState.hasFrames
+              ? 'Share the last 10 seconds of gameplay.'
+              : 'The recorder needs a few moves before a highlight is ready.';
+      postGameActions.add(
+        Tooltip(
+          message: tooltipMessage,
+          child: _HighlightShareButton(
+            onPressed: highlightState.hasFrames && !highlightState.shareState.isLoading
+                ? () => _showShareOptions(highlightController)
+                : null,
+            isBusy: highlightState.shareState.isLoading,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (streakBadge != null) ...[
+          streakBadge!,
+          const SizedBox(height: 12),
+        ],
+        GameStatusBanner(
+          gameState: widget.match.game,
+          localPlayerMark: playerMark,
+          activeModifierCategory:
+              _categoryRevealComplete ? modifierCategory : null,
+          activeModifierId: widget.match.modifierId,
+          onLeave: isGameComplete
+              ? null
+              : () => _confirmLeaveMatch(
+                    context,
+                    matchmakingController,
+                    widget.match.id,
+                  ),
+          onReturnToMenu: isGameComplete
+              ? () => _leaveMatch(
+                    context,
+                    matchmakingController,
+                    widget.match.id,
+                  )
+              : null,
+          onPlayAgain: isGameComplete
+              ? () => _playAgain(
+                    context,
+                    matchmakingController,
+                    widget.match.id,
+                  )
+              : null,
+          postGameActions: postGameActions,
+        ),
+        if (modifierCategory != null) ...[
+          const SizedBox(height: 16),
+          ModifierCategoryReveal(
+            key: ValueKey(_revealSignature),
+            category: modifierCategory,
+            onRevealComplete: _handleRevealComplete,
+          ),
+        ],
+        const SizedBox(height: 24),
+        Expanded(
+          child: RepaintBoundary(
+            key: _boardCaptureKey,
+            child: Stack(
+              children: [
+                AnimatedOpacity(
+                  opacity: _categoryRevealComplete ? 1 : 0.15,
+                  duration: const Duration(milliseconds: 250),
+                  child: IgnorePointer(
+                    ignoring: !_categoryRevealComplete,
+                    child: boardWidget,
+                  ),
+                ),
+                if (!_categoryRevealComplete)
+                  const Positioned.fill(child: _MatchIntroShield()),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _playMove(
+    BuildContext context,
+    MatchRepository repository,
+    String matchId,
+    String playerId,
+    BoardPosition position,
+  ) async {
+    try {
+      await repository.submitMove(
+        matchId: matchId,
+        playerId: playerId,
+        position: position,
+      );
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  Future<void> _confirmLeaveMatch(
+    BuildContext context,
+    MatchmakingController controller,
+    String matchId,
+  ) async {
+    final shouldLeave = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Leave Match?'),
+          content: const Text(
+            'Leaving early counts as a forfeit. Are you sure you want to exit?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Stay'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Leave'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLeave == true) {
+      await _leaveMatch(context, controller, matchId);
+    }
+  }
+
+  Future<void> _leaveMatch(
+    BuildContext context,
+    MatchmakingController controller,
+    String matchId,
+  ) async {
+    try {
+      await controller.leaveMatch(matchId);
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  Future<void> _playAgain(
+    BuildContext context,
+    MatchmakingController controller,
+    String matchId,
+  ) async {
+    try {
+      await controller.playAgain(matchId);
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  Future<void> _showShareOptions(MatchHighlightController controller) async {
+    if (!mounted) return;
+    final HighlightShareTarget? target = await showModalBottomSheet<HighlightShareTarget>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return const _HighlightShareSheet();
+      },
+    );
+
+    if (target != null) {
+      await controller.shareHighlight(target);
+    }
+  }
+}
+
+class _MatchIntroShield extends StatelessWidget {
+  const _MatchIntroShield();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.94),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(
+            'Selecting game mode...',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Hang tight while we lock in a twist for this round.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HighlightShareButton extends StatelessWidget {
+  const _HighlightShareButton({required this.onPressed, required this.isBusy});
+
+  final VoidCallback? onPressed;
+  final bool isBusy;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: isBusy
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2.4),
+            )
+          : const Icon(Icons.share_rounded),
+      label: Text(isBusy ? 'Preparing...' : 'Share Highlight'),
+    );
+  }
+}
+
+class _HighlightShareSheet extends StatelessWidget {
+  const _HighlightShareSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Share highlight',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            ...HighlightShareTarget.values.map((target) {
+              return ListTile(
+                leading: Icon(target.icon),
+                title: Text(target.label),
+                subtitle: Text(target.description),
+                onTap: () => Navigator.of(context).pop(target),
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+## Current Preview File:
+```dart
+import 'package:flutter/widgets.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/pages/game_home_page.dart' as i0;
+import 'package:flutter/foundation.dart' as i1;
+
+
+@Preview(name: 'GameHomePage')
+Widget previewGameHomePage() {
+  return i0.GameHomePage(
+    key: /* TODO: provide optional Key value for key: */ i1.Key(
+      /* TODO: provide String value for value: */ '',
+    ),
+  );
+}
+
+
+```
+
+Generate the complete preview file content focusing on parameter-driven configurations only. Do not include any code blocks or markdown formatting in your response - just the raw Dart code.
+#########################
+ASSISTANT
+#########################
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' as i1;
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/pages/game_home_page.dart' as i0;
+import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart' as i2;
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart' as i3;
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/offline_match_controller.dart' as i4;
+import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart' as i5;
+import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart' as i6;
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart' as i7;
+import 'package:not_so_tic_tac_toe_game/domain/entities/ultimate_board_state.dart' as i8;
+import 'package:not_so_tic_tac_toe_game/presentation/features/highlights/highlight_share_target.dart' as i9;
+
+@Preview(name: 'GameHomePage')
+Widget previewGameHomePage() {
+  return const i0.GameHomePage();
+}
+
+@Preview(name: '_IdleView')
+Widget preview_IdleView() {
+  return const i0._IdleView();
+}
+
+@Preview(name: '_SearchingView')
+Widget preview_SearchingView() {
+  return const i0._SearchingView();
+}
+
+@Preview(name: '_ConnectingView')
+Widget preview_ConnectingView() {
+  return const i0._ConnectingView(
+    opponentMatchId: 'match-12345',
+  );
+}
+
+@Preview(name: '_ConnectingViewNoId')
+Widget preview_ConnectingViewNoId() {
+  return const i0._ConnectingView(
+    opponentMatchId: null,
+  );
+}
+
+@Preview(name: '_ErrorView')
+Widget preview_ErrorView() {
+  return const i0._ErrorView(
+    message: 'Failed to connect to server. Please check your internet connection.',
+  );
+}
+
+@Preview(name: '_ErrorViewNoMessage')
+Widget preview_ErrorViewNoMessage() {
+  return const i0._ErrorView(
+    message: null,
+  );
+}
+
+@Preview(name: '_OfflineMatchViewInProgress')
+Widget preview_OfflineMatchViewInProgress() {
+  return i0._OfflineMatchView(
+    state: i4.OfflineMatchState(
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      round: 1,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+  );
+}
+
+@Preview(name: '_OfflineMatchViewWon')
+Widget preview_OfflineMatchViewWon() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i1.BoardPosition(row: 0, col: 0))
+      .playMove(const i1.BoardPosition(row: 1, col: 0))
+      .playMove(const i1.BoardPosition(row: 0, col: 1))
+      .playMove(const i1.BoardPosition(row: 1, col: 1))
+      .playMove(const i1.BoardPosition(row: 0, col: 2)); // X wins
+  return i0._OfflineMatchView(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 2,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+  );
+}
+
+@Preview(name: '_OfflineMatchViewDraw')
+Widget preview_OfflineMatchViewDraw() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i1.BoardPosition(row: 0, col: 0)) // X
+      .playMove(const i1.BoardPosition(row: 0, col: 1)) // O
+      .playMove(const i1.BoardPosition(row: 0, col: 2)) // X
+      .playMove(const i1.BoardPosition(row: 1, col: 1)) // O
+      .playMove(const i1.BoardPosition(row: 1, col: 0)) // X
+      .playMove(const i1.BoardPosition(row: 2, col: 0)) // O
+      .playMove(const i1.BoardPosition(row: 1, col: 2)) // X
+      .playMove(const i1.BoardPosition(row: 2, col: 2)) // O
+      .playMove(const i1.BoardPosition(row: 2, col: 1)); // X - Draw
+  return i0._OfflineMatchView(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 3,
+      nextStartingPlayer: i3.PlayerMark.x,
+    ),
+  );
+}
+
+@Preview(name: '_OfflineStatusBannerInProgress')
+Widget preview_OfflineStatusBannerInProgress() {
+  return i0._OfflineStatusBanner(
+    state: i4.OfflineMatchState(
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      round: 1,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+    onExit: () {},
+    onRematch: () {},
+  );
+}
+
+@Preview(name: '_OfflineStatusBannerWon')
+Widget preview_OfflineStatusBannerWon() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i1.BoardPosition(row: 0, col: 0))
+      .playMove(const i1.BoardPosition(row: 1, col: 0))
+      .playMove(const i1.BoardPosition(row: 0, col: 1))
+      .playMove(const i1.BoardPosition(row: 1, col: 1))
+      .playMove(const i1.BoardPosition(row: 0, col: 2)); // X wins
+  return i0._OfflineStatusBanner(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 2,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+    onExit: () {},
+    onRematch: () {},
+  );
+}
+
+@Preview(name: '_OfflineStatusBannerDraw')
+Widget preview_OfflineStatusBannerDraw() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i1.BoardPosition(row: 0, col: 0)) // X
+      .playMove(const i1.BoardPosition(row: 0, col: 1)) // O
+      .playMove(const i1.BoardPosition(row: 0, col: 2)) // X
+      .playMove(const i1.BoardPosition(row: 1, col: 1)) // O
+      .playMove(const i1.BoardPosition(row: 1, col: 0)) // X
+      .playMove(const i1.BoardPosition(row: 2, col: 0)) // O
+      .playMove(const i1.BoardPosition(row: 1, col: 2)) // X
+      .playMove(const i1.BoardPosition(row: 2, col: 2)) // O
+      .playMove(const i1.BoardPosition(row: 2, col: 1)); // X - Draw
+  return i0._OfflineStatusBanner(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 3,
+      nextStartingPlayer: i3.PlayerMark.x,
+    ),
+    onExit: () {},
+    onRematch: () {},
+  );
+}
+
+@Preview(name: '_MatchViewInProgress')
+Widget preview_MatchViewInProgress() {
+  return i0._MatchView(
+    match: i6.MatchState(
+      id: 'match-123',
+      playerXId: 'player-x',
+      playerOId: 'player-o',
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      status: i5.GameStatus.inProgress,
+      modifierCategory: i7.ModifierCategory.gravity,
+      modifierId: 'gravity',
+      isUltimateModeMatch: false,
+      ultimateState: null,
+      blockedPositions: const {},
+      spinnerOptions: const [],
+      gravityDropPath: null,
+    ),
+    playerId: 'player-x',
+  );
+}
+
+@Preview(name: '_MatchViewUltimateMode')
+Widget preview_MatchViewUltimateMode() {
+  return i0._MatchView(
+    match: i6.MatchState(
+      id: 'match-456',
+      playerXId: 'player-x',
+      playerOId: 'player-o',
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      status: i5.GameStatus.inProgress,
+      modifierCategory: i7.ModifierCategory.ultimate,
+      modifierId: 'ultimate',
+      isUltimateModeMatch: true,
+      ultimateState: i8.UltimateBoardState.newGame(),
+      blockedPositions: const {},
+      spinnerOptions: const [],
+      gravityDropPath: null,
+    ),
+    playerId: 'player-x',
+  );
+}
+
+@Preview(name: '_MatchViewGameComplete')
+Widget preview_MatchViewGameComplete() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i1.BoardPosition(row: 0, col: 0))
+      .playMove(const i1.BoardPosition(row: 1, col: 0))
+      .playMove(const i1.BoardPosition(row: 0, col: 1))
+      .playMove(const i1.BoardPosition(row: 1, col: 1))
+      .playMove(const i1.BoardPosition(row: 0, col: 2)); // X wins
+  return i0._MatchView(
+    match: i6.MatchState(
+      id: 'match-789',
+      playerXId: 'player-x',
+      playerOId: 'player-o',
+      game: game,
+      status: i5.GameStatus.won,
+      modifierCategory: null,
+      modifierId: null,
+      isUltimateModeMatch: false,
+      ultimateState: null,
+      blockedPositions: const {},
+      spinnerOptions: const [],
+      gravityDropPath: null,
+    ),
+    playerId: 'player-x',
+  );
+}
+
+@Preview(name: '_MatchIntroShield')
+Widget preview_MatchIntroShield() {
+  return const i0._MatchIntroShield();
+}
+
+@Preview(name: '_HighlightShareButtonEnabled')
+Widget preview_HighlightShareButtonEnabled() {
+  return i0._HighlightShareButton(
+    onPressed: () {},
+    isBusy: false,
+  );
+}
+
+@Preview(name: '_HighlightShareButtonBusy')
+Widget preview_HighlightShareButtonBusy() {
+  return i0._HighlightShareButton(
+    onPressed: null,
+    isBusy: true,
+  );
+}
+
+@Preview(name: '_HighlightShareButtonDisabled')
+Widget preview_HighlightShareButtonDisabled() {
+  return i0._HighlightShareButton(
+    onPressed: null,
+    isBusy: false,
+  );
+}
+
+@Preview(name: '_HighlightShareSheet')
+Widget preview_HighlightShareSheet() {
+  return const i0._HighlightShareSheet();
+}
+#########################
+USER
+#########################
+I received these analyzer errors from the generated preview file:
+
+{"line": 26, "column": 19, "message": "The name '_IdleView' isn't a class."}
+{"line": 31, "column": 19, "message": "The name '_SearchingView' isn't a class."}
+{"line": 36, "column": 19, "message": "The name '_ConnectingView' isn't a class."}
+{"line": 43, "column": 19, "message": "The name '_ConnectingView' isn't a class."}
+{"line": 50, "column": 19, "message": "The name '_ErrorView' isn't a class."}
+{"line": 58, "column": 19, "message": "The name '_ErrorView' isn't a class."}
+{"line": 77, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 78, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 79, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 80, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 81, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 94, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 95, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 96, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 97, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 98, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 99, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 100, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 101, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 102, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 128, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 129, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 130, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 131, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 132, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 147, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 148, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 149, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 150, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 151, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 152, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 153, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 154, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 155, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 212, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 213, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 214, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 215, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 216, "column": 26, "message": "The name 'BoardPosition' isn't a class."}
+{"line": 238, "column": 19, "message": "The name '_MatchIntroShield' isn't a class."}
+{"line": 267, "column": 19, "message": "The name '_HighlightShareSheet' isn't a class."}
+{"line": 65, "column": 13, "message": "The function '_OfflineMatchView' isn't defined."}
+{"line": 82, "column": 13, "message": "The function '_OfflineMatchView' isn't defined."}
+{"line": 103, "column": 13, "message": "The function '_OfflineMatchView' isn't defined."}
+{"line": 114, "column": 13, "message": "The function '_OfflineStatusBanner' isn't defined."}
+{"line": 133, "column": 13, "message": "The function '_OfflineStatusBanner' isn't defined."}
+{"line": 156, "column": 13, "message": "The function '_OfflineStatusBanner' isn't defined."}
+{"line": 178, "column": 7, "message": "The named parameter 'isUltimateModeMatch' isn't defined."}
+{"line": 176, "column": 45, "message": "There's no constant named 'gravity' in 'ModifierCategory'."}
+{"line": 182, "column": 24, "message": "The argument type 'Null' can't be assigned to the parameter type 'List<BoardPosition>'. "}
+{"line": 169, "column": 13, "message": "The function '_MatchView' isn't defined."}
+{"line": 199, "column": 7, "message": "The named parameter 'isUltimateModeMatch' isn't defined."}
+{"line": 197, "column": 45, "message": "There's no constant named 'ultimate' in 'ModifierCategory'."}
+{"line": 200, "column": 44, "message": "The method 'newGame' isn't defined for the type 'UltimateBoardState'."}
+{"line": 203, "column": 24, "message": "The argument type 'Null' can't be assigned to the parameter type 'List<BoardPosition>'. "}
+{"line": 190, "column": 13, "message": "The function '_MatchView' isn't defined."}
+{"line": 226, "column": 7, "message": "The named parameter 'isUltimateModeMatch' isn't defined."}
+{"line": 230, "column": 24, "message": "The argument type 'Null' can't be assigned to the parameter type 'List<BoardPosition>'. "}
+{"line": 217, "column": 13, "message": "The function '_MatchView' isn't defined."}
+{"line": 243, "column": 13, "message": "The function '_HighlightShareButton' isn't defined."}
+{"line": 251, "column": 13, "message": "The function '_HighlightShareButton' isn't defined."}
+{"line": 259, "column": 13, "message": "The function '_HighlightShareButton' isn't defined."}
+{"line": 170, "column": 12, "message": "The named parameter 'playerStates' is required, but there's no corresponding argument."}
+{"line": 170, "column": 12, "message": "The named parameter 'createdAt' is required, but there's no corresponding argument."}
+{"line": 170, "column": 12, "message": "The named parameter 'updatedAt' is required, but there's no corresponding argument."}
+{"line": 191, "column": 12, "message": "The named parameter 'playerStates' is required, but there's no corresponding argument."}
+{"line": 191, "column": 12, "message": "The named parameter 'createdAt' is required, but there's no corresponding argument."}
+{"line": 191, "column": 12, "message": "The named parameter 'updatedAt' is required, but there's no corresponding argument."}
+{"line": 218, "column": 12, "message": "The named parameter 'playerStates' is required, but there's no corresponding argument."}
+{"line": 218, "column": 12, "message": "The named parameter 'createdAt' is required, but there's no corresponding argument."}
+{"line": 218, "column": 12, "message": "The named parameter 'updatedAt' is required, but there's no corresponding argument."}
+
+Please fix these errors and generate the corrected preview file. Focus on simplicity and ensure the code compiles correctly. Output only the raw Dart code.
+#########################
+ASSISTANT
+#########################
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' as i1;
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/pages/game_home_page.dart' as i0;
+import 'package:not_so_tic_tac_toe_game/domain/entities/tic_tac_toe_game.dart' as i2;
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_mark.dart' as i3;
+import 'package:not_so_tic_tac_toe_game/presentation/features/game/controllers/offline_match_controller.dart' as i4;
+import 'package:not_so_tic_tac_toe_game/domain/entities/game_status.dart' as i5;
+import 'package:not_so_tic_tac_toe_game/domain/entities/match_state.dart' as i6;
+import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_category.dart' as i7;
+import 'package:not_so_tic_tac_toe_game/domain/entities/ultimate_board_state.dart' as i8;
+import 'package:not_so_tic_tac_toe_game/domain/entities/board_position.dart' as i9;
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_profile.dart' as i10;
+import 'package:not_so_tic_tac_toe_game/domain/entities/player_state.dart' as i11;
+
+@Preview(name: 'GameHomePage')
+Widget previewGameHomePage() {
+  return const i0.GameHomePage();
+}
+
+@Preview(name: '_IdleView')
+Widget preview_IdleView() {
+  return const i0._IdleView();
+}
+
+@Preview(name: '_SearchingView')
+Widget preview_SearchingView() {
+  return const i0._SearchingView();
+}
+
+@Preview(name: '_ConnectingView')
+Widget preview_ConnectingView() {
+  return const i0._ConnectingView(
+    opponentMatchId: 'match-12345',
+  );
+}
+
+@Preview(name: '_ConnectingViewNoId')
+Widget preview_ConnectingViewNoId() {
+  return const i0._ConnectingView(
+    opponentMatchId: null,
+  );
+}
+
+@Preview(name: '_ErrorView')
+Widget preview_ErrorView() {
+  return const i0._ErrorView(
+    message: 'Failed to connect to server. Please check your internet connection.',
+  );
+}
+
+@Preview(name: '_ErrorViewNoMessage')
+Widget preview_ErrorViewNoMessage() {
+  return const i0._ErrorView(
+    message: null,
+  );
+}
+
+@Preview(name: '_OfflineMatchViewInProgress')
+Widget preview_OfflineMatchViewInProgress() {
+  return i0._OfflineMatchView(
+    state: i4.OfflineMatchState(
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      round: 1,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+  );
+}
+
+@Preview(name: '_OfflineMatchViewWon')
+Widget preview_OfflineMatchViewWon() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i9.BoardPosition(row: 0, col: 0))
+      .playMove(const i9.BoardPosition(row: 1, col: 0))
+      .playMove(const i9.BoardPosition(row: 0, col: 1))
+      .playMove(const i9.BoardPosition(row: 1, col: 1))
+      .playMove(const i9.BoardPosition(row: 0, col: 2)); // X wins
+  return i0._OfflineMatchView(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 2,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+  );
+}
+
+@Preview(name: '_OfflineMatchViewDraw')
+Widget preview_OfflineMatchViewDraw() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i9.BoardPosition(row: 0, col: 0)) // X
+      .playMove(const i9.BoardPosition(row: 0, col: 1)) // O
+      .playMove(const i9.BoardPosition(row: 0, col: 2)) // X
+      .playMove(const i9.BoardPosition(row: 1, col: 1)) // O
+      .playMove(const i9.BoardPosition(row: 1, col: 0)) // X
+      .playMove(const i9.BoardPosition(row: 2, col: 0)) // O
+      .playMove(const i9.BoardPosition(row: 1, col: 2)) // X
+      .playMove(const i9.BoardPosition(row: 2, col: 2)) // O
+      .playMove(const i9.BoardPosition(row: 2, col: 1)); // X - Draw
+  return i0._OfflineMatchView(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 3,
+      nextStartingPlayer: i3.PlayerMark.x,
+    ),
+  );
+}
+
+@Preview(name: '_OfflineStatusBannerInProgress')
+Widget preview_OfflineStatusBannerInProgress() {
+  return i0._OfflineStatusBanner(
+    state: i4.OfflineMatchState(
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      round: 1,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+    onExit: () {},
+    onRematch: () {},
+  );
+}
+
+@Preview(name: '_OfflineStatusBannerWon')
+Widget preview_OfflineStatusBannerWon() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i9.BoardPosition(row: 0, col: 0))
+      .playMove(const i9.BoardPosition(row: 1, col: 0))
+      .playMove(const i9.BoardPosition(row: 0, col: 1))
+      .playMove(const i9.BoardPosition(row: 1, col: 1))
+      .playMove(const i9.BoardPosition(row: 0, col: 2)); // X wins
+  return i0._OfflineStatusBanner(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 2,
+      nextStartingPlayer: i3.PlayerMark.o,
+    ),
+    onExit: () {},
+    onRematch: () {},
+  );
+}
+
+@Preview(name: '_OfflineStatusBannerDraw')
+Widget preview_OfflineStatusBannerDraw() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i9.BoardPosition(row: 0, col: 0)) // X
+      .playMove(const i9.BoardPosition(row: 0, col: 1)) // O
+      .playMove(const i9.BoardPosition(row: 0, col: 2)) // X
+      .playMove(const i9.BoardPosition(row: 1, col: 1)) // O
+      .playMove(const i9.BoardPosition(row: 1, col: 0)) // X
+      .playMove(const i9.BoardPosition(row: 2, col: 0)) // O
+      .playMove(const i9.BoardPosition(row: 1, col: 2)) // X
+      .playMove(const i9.BoardPosition(row: 2, col: 2)) // O
+      .playMove(const i9.BoardPosition(row: 2, col: 1)); // X - Draw
+  return i0._OfflineStatusBanner(
+    state: i4.OfflineMatchState(
+      game: game,
+      round: 3,
+      nextStartingPlayer: i3.PlayerMark.x,
+    ),
+    onExit: () {},
+    onRematch: () {},
+  );
+}
+
+@Preview(name: '_MatchViewInProgress')
+Widget preview_MatchViewInProgress() {
+  return i0._MatchView(
+    match: i6.MatchState(
+      id: 'match-123',
+      playerXId: 'player-x',
+      playerOId: 'player-o',
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      status: i5.GameStatus.inProgress,
+      modifierCategory: i7.ModifierCategory.gravity,
+      modifierId: 'gravity',
+      isUltimateModeMatch: false,
+      ultimateState: null,
+      blockedPositions: const [],
+      spinnerOptions: const [],
+      gravityDropPath: null,
+      playerStates: {
+        'player-x': i11.PlayerState(
+          id: 'player-x',
+          profile: i10.PlayerProfile(id: 'player-x', name: 'Player X', streak: 5),
+          mark: i3.PlayerMark.x,
+        ),
+        'player-o': i11.PlayerState(
+          id: 'player-o',
+          profile: i10.PlayerProfile(id: 'player-o', name: 'Player O', streak: 3),
+          mark: i3.PlayerMark.o,
+        ),
+      },
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),
+    playerId: 'player-x',
+  );
+}
+
+@Preview(name: '_MatchViewUltimateMode')
+Widget preview_MatchViewUltimateMode() {
+  return i0._MatchView(
+    match: i6.MatchState(
+      id: 'match-456',
+      playerXId: 'player-x',
+      playerOId: 'player-o',
+      game: i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x),
+      status: i5.GameStatus.inProgress,
+      modifierCategory: i7.ModifierCategory.ultimate,
+      modifierId: 'ultimate',
+      isUltimateModeMatch: true,
+      ultimateState: i8.UltimateBoardState.newGame(),
+      blockedPositions: const [],
+      spinnerOptions: const [],
+      gravityDropPath: null,
+      playerStates: {
+        'player-x': i11.PlayerState(
+          id: 'player-x',
+          profile: i10.PlayerProfile(id: 'player-x', name: 'Player X', streak: 5),
+          mark: i3.PlayerMark.x,
+        ),
+        'player-o': i11.PlayerState(
+          id: 'player-o',
+          profile: i10.PlayerProfile(id: 'player-o', name: 'Player O', streak: 3),
+          mark: i3.PlayerMark.o,
+        ),
+      },
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),
+    playerId: 'player-x',
+  );
+}
+
+@Preview(name: '_MatchViewGameComplete')
+Widget preview_MatchViewGameComplete() {
+  final game = i2.TicTacToeGame.newGame(startingPlayer: i3.PlayerMark.x)
+      .playMove(const i9.BoardPosition(row: 0, col: 0))
+      .playMove(const i9.BoardPosition(row: 1, col: 0))
+      .playMove(const i9.BoardPosition(row: 0, col: 1))
+      .playMove(const i9.BoardPosition(row: 1, col: 1))
+      .playMove(const i9.BoardPosition(row: 0, col: 2)); // X wins
+  return i0._MatchView(
+    match: i6.MatchState(
+      id: 'match-789',
+      playerXId: 'player-x',
+      playerOId: 'player-o',
+      game: game,
+      status: i5.GameStatus.won,
+      modifierCategory: null,
+      modifierId: null,
+      isUltimateModeMatch: false,
+      ultimateState: null,
+      blockedPositions: const [],
+      spinnerOptions: const [],
+      gravityDropPath: null,
+      playerStates: {
+        'player-x': i11.PlayerState(
+          id: 'player-x',
+          profile: i10.PlayerProfile(id: 'player-x', name: 'Player X', streak: 5),
+          mark: i3.PlayerMark.x,
+        ),
+        'player-o': i11.PlayerState(
+          id: 'player-o',
+          profile: i10.PlayerProfile(id: 'player-o', name: 'Player O', streak: 3),
+          mark: i3.PlayerMark.o,
+        ),
+      },
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),
+    playerId: 'player-x',
+  );
+}
+
+@Preview(name: '_MatchIntroShield')
+Widget preview_MatchIntroShield() {
+  return const i0._MatchIntroShield();
+}
+
+@Preview(name: '_HighlightShareButtonEnabled')
+Widget preview_HighlightShareButtonEnabled() {
+  return i0._HighlightShareButton(
+    onPressed: () {},
+    isBusy: false,
+  );
+}
+
+@Preview(name: '_HighlightShareButtonBusy')
+Widget preview_HighlightShareButtonBusy() {
+  return i0._HighlightShareButton(
+    onPressed: null,
+    isBusy: true,
+  );
+}
+
+@Preview(name: '_HighlightShareButtonDisabled')
+Widget preview_HighlightShareButtonDisabled() {
+  return i0._HighlightShareButton(
+    onPressed: null,
+    isBusy: false,
+  );
+}
+
+@Preview(name: '_HighlightShareSheet')
+Widget preview_HighlightShareSheet() {
+  return const i0._HighlightShareSheet();
+}

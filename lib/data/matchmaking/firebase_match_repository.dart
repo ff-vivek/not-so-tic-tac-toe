@@ -21,6 +21,9 @@ class FirebaseMatchRepository implements MatchRepository {
   CollectionReference<Map<String, dynamic>> get _matchesCollection =>
       _firestore.collection('matches');
 
+  CollectionReference<Map<String, dynamic>> get _playersCollection =>
+      _firestore.collection('players');
+
   @override
   Stream<MatchState?> watchActiveMatch({required String playerId}) {
     final query = _matchesCollection
@@ -108,6 +111,14 @@ class FirebaseMatchRepository implements MatchRepository {
 
         analyticsEvent = result.analyticsEvent;
         transaction.update(matchRef, result.updates);
+        if (result.emittedOutcome) {
+          await _applyStreakUpdates(
+            transaction: transaction,
+            participantIds: [playerXId, playerOId],
+            winnerPlayerId: result.winnerPlayerId,
+            isDraw: result.matchStatus == GameStatus.draw,
+          );
+        }
         return;
       }
 
@@ -188,6 +199,13 @@ class FirebaseMatchRepository implements MatchRepository {
             endedByForfeit: false,
           ),
         });
+
+        await _applyStreakUpdates(
+          transaction: transaction,
+          participantIds: [playerXId, playerOId],
+          winnerPlayerId: winnerPlayerId,
+          isDraw: updatedGame.status == GameStatus.draw,
+        );
 
         analyticsEvent = {
           'type': 'match_completed',
@@ -275,6 +293,13 @@ class FirebaseMatchRepository implements MatchRepository {
           ),
         });
 
+        await _applyStreakUpdates(
+          transaction: transaction,
+          participantIds: [playerXId, playerOId],
+          winnerPlayerId: opponentId,
+          isDraw: false,
+        );
+
         analyticsEvent = {
           'type': 'match_completed',
           'matchId': matchId,
@@ -308,6 +333,15 @@ class FirebaseMatchRepository implements MatchRepository {
             endedByForfeit: false,
           ),
         });
+
+        if (derivedStatus != GameStatus.inProgress) {
+          await _applyStreakUpdates(
+            transaction: transaction,
+            participantIds: [playerXId, playerOId],
+            winnerPlayerId: winnerPlayerId,
+            isDraw: derivedStatus == GameStatus.draw,
+          );
+        }
 
         analyticsEvent = {
           'type': 'match_completed',
@@ -476,6 +510,9 @@ class FirebaseMatchRepository implements MatchRepository {
   ({
     Map<String, dynamic> updates,
     Map<String, dynamic>? analyticsEvent,
+    bool emittedOutcome,
+    GameStatus matchStatus,
+    String? winnerPlayerId,
   }) _processUltimateMove({
     required String matchId,
     required Map<String, dynamic> data,
@@ -604,6 +641,7 @@ class FirebaseMatchRepository implements MatchRepository {
     };
 
     Map<String, dynamic>? analytics;
+    var emittedOutcome = false;
 
     if (matchStatus != GameStatus.inProgress && existingOutcome == null) {
       final outcomePayload = <String, dynamic>{
@@ -634,9 +672,17 @@ class FirebaseMatchRepository implements MatchRepository {
         'participantIds': [playerXId, playerOId],
         'ratingDelta': updates['ratingDelta'],
       };
+
+      emittedOutcome = true;
     }
 
-    return (updates: updates, analyticsEvent: analytics);
+    return (
+      updates: updates,
+      analyticsEvent: analytics,
+      emittedOutcome: emittedOutcome,
+      matchStatus: matchStatus,
+      winnerPlayerId: winnerPlayerId,
+    );
   }
 
   PlayerMark? _detectWinner(List<PlayerMark?> board) {
@@ -735,6 +781,49 @@ class FirebaseMatchRepository implements MatchRepository {
       ...payload,
       'recordedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> _applyStreakUpdates({
+    required Transaction transaction,
+    required List<String> participantIds,
+    required String? winnerPlayerId,
+    required bool isDraw,
+  }) async {
+    for (final playerId in participantIds) {
+      final docRef = _playersCollection.doc(playerId);
+      final snapshot = await transaction.get(docRef);
+
+      final data = snapshot.data() ?? <String, dynamic>{};
+      final current = (data['currentWinStreak'] as num?)?.toInt() ?? 0;
+      final max = (data['maxWinStreak'] as num?)?.toInt() ?? 0;
+
+      var updatedCurrent = 0;
+      var updatedMax = max;
+
+      if (!isDraw && winnerPlayerId != null) {
+        if (playerId == winnerPlayerId) {
+          updatedCurrent = current + 1;
+          if (updatedCurrent > max) {
+            updatedMax = updatedCurrent;
+          }
+        } else {
+          updatedCurrent = 0;
+        }
+      }
+
+      final payload = <String, dynamic>{
+        'currentWinStreak': updatedCurrent,
+        'maxWinStreak': updatedMax,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (!snapshot.exists) {
+        payload['createdAt'] = FieldValue.serverTimestamp();
+        transaction.set(docRef, payload);
+      } else {
+        transaction.update(docRef, payload);
+      }
+    }
   }
 
   Map<String, int> _ratingDeltaStub({

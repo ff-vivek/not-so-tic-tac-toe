@@ -14,6 +14,7 @@ class GameStatusBanner extends StatelessWidget {
     this.onLeave,
     this.activeModifierCategory,
     this.activeModifierId,
+    this.postGameActions = const [],
   });
 
   final TicTacToeGame gameState;
@@ -23,6 +24,7 @@ class GameStatusBanner extends StatelessWidget {
   final VoidCallback? onLeave;
   final ModifierCategory? activeModifierCategory;
   final String? activeModifierId;
+  final List<Widget> postGameActions;
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +151,9 @@ class GameStatusBanner extends StatelessWidget {
         break;
       case GameStatus.won:
       case GameStatus.draw:
+        if (postGameActions.isNotEmpty) {
+          actions.addAll(postGameActions);
+        }
         if (onPlayAgain != null) {
           actions.add(
             FilledButton.icon(
