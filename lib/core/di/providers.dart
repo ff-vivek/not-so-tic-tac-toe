@@ -13,6 +13,12 @@ import 'package:not_so_tic_tac_toe_game/domain/modifiers/modifier_registry.dart'
 import 'package:not_so_tic_tac_toe_game/domain/repositories/match_repository.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/matchmaking_repository.dart';
 import 'package:not_so_tic_tac_toe_game/domain/repositories/player_profile_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/tournament_repository.dart';
+import 'package:not_so_tic_tac_toe_game/data/tournaments/firebase_tournament_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/clan_repository.dart';
+import 'package:not_so_tic_tac_toe_game/data/clans/firebase_clan_repository.dart';
+import 'package:not_so_tic_tac_toe_game/domain/repositories/team_matchmaking_repository.dart';
+import 'package:not_so_tic_tac_toe_game/data/matchmaking/firebase_team_matchmaking_repository.dart';
 
 final modifierRegistryProvider = Provider<ModifierRegistry>((ref) {
   final registry = ModifierRegistry();
@@ -75,4 +81,19 @@ final playerAccountServiceProvider = Provider<PlayerAccountService>((ref) {
   final auth = ref.watch(firebaseAuthProvider);
   final firestore = ref.watch(firestoreProvider);
   return PlayerAccountService(auth, firestore);
+});
+
+final tournamentRepositoryProvider = Provider<TournamentRepository>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  return FirebaseTournamentRepository(firestore);
+});
+
+final clanRepositoryProvider = Provider<ClanRepository>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  return FirebaseClanRepository(firestore);
+});
+
+final teamMatchmakingRepositoryProvider = Provider<TeamMatchmakingRepository>((ref) {
+  final firestore = ref.watch(firestoreProvider);
+  return FirebaseTeamMatchmakingRepository(firestore);
 });

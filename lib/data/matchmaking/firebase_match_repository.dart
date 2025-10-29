@@ -112,6 +112,15 @@ class FirebaseMatchRepository implements MatchRepository {
         analyticsEvent = result.analyticsEvent;
         transaction.update(matchRef, result.updates);
         if (result.emittedOutcome) {
+          final rawDelta = result.updates['ratingDelta'];
+          if (rawDelta is Map<String, dynamic>) {
+            final delta = rawDelta.map((key, value) => MapEntry(
+                key, value is int ? value : (value as num).toInt()));
+            await _applyRatingUpdates(
+              transaction: transaction,
+              deltas: delta,
+            );
+          }
           await _applyStreakUpdates(
             transaction: transaction,
             participantIds: [playerXId, playerOId],
@@ -188,17 +197,24 @@ class FirebaseMatchRepository implements MatchRepository {
           'completedBy': 'board',
         };
 
+        final ratingDelta = _ratingDeltaStub(
+          playerXId: playerXId,
+          playerOId: playerOId,
+          winnerPlayerId: winnerPlayerId,
+          status: updatedGame.status,
+          endedByForfeit: false,
+        );
+
         updates.addAll({
           'completedAt': FieldValue.serverTimestamp(),
           'outcome': outcomePayload,
-          'ratingDelta': _ratingDeltaStub(
-            playerXId: playerXId,
-            playerOId: playerOId,
-            winnerPlayerId: winnerPlayerId,
-            status: updatedGame.status,
-            endedByForfeit: false,
-          ),
+          'ratingDelta': ratingDelta,
         });
+
+        await _applyRatingUpdates(
+          transaction: transaction,
+          deltas: ratingDelta,
+        );
 
         await _applyStreakUpdates(
           transaction: transaction,
@@ -278,20 +294,27 @@ class FirebaseMatchRepository implements MatchRepository {
           'forfeitBy': playerId,
         };
 
+        final ratingDelta = _ratingDeltaStub(
+          playerXId: playerXId,
+          playerOId: playerOId,
+          winnerPlayerId: opponentId,
+          status: GameStatus.won,
+          endedByForfeit: true,
+        );
+
         updates.addAll({
           'status': 'won',
           'winnerMark': winningMark,
           'winnerPlayerId': opponentId,
           'completedAt': FieldValue.serverTimestamp(),
           'outcome': outcomePayload,
-          'ratingDelta': _ratingDeltaStub(
-            playerXId: playerXId,
-            playerOId: playerOId,
-            winnerPlayerId: opponentId,
-            status: GameStatus.won,
-            endedByForfeit: true,
-          ),
+          'ratingDelta': ratingDelta,
         });
+
+        await _applyRatingUpdates(
+          transaction: transaction,
+          deltas: ratingDelta,
+        );
 
         await _applyStreakUpdates(
           transaction: transaction,
@@ -322,19 +345,25 @@ class FirebaseMatchRepository implements MatchRepository {
           'completedBy': 'manual_leave',
         };
 
+        final ratingDelta = _ratingDeltaStub(
+          playerXId: playerXId,
+          playerOId: playerOId,
+          winnerPlayerId: winnerPlayerId,
+          status: derivedStatus,
+          endedByForfeit: false,
+        );
+
         updates.addAll({
           if (data['completedAt'] == null) 'completedAt': FieldValue.serverTimestamp(),
           'outcome': outcomePayload,
-          'ratingDelta': _ratingDeltaStub(
-            playerXId: playerXId,
-            playerOId: playerOId,
-            winnerPlayerId: winnerPlayerId,
-            status: derivedStatus,
-            endedByForfeit: false,
-          ),
+          'ratingDelta': ratingDelta,
         });
 
         if (derivedStatus != GameStatus.inProgress) {
+          await _applyRatingUpdates(
+            transaction: transaction,
+            deltas: ratingDelta,
+          );
           await _applyStreakUpdates(
             transaction: transaction,
             participantIds: [playerXId, playerOId],
@@ -814,6 +843,33 @@ class FirebaseMatchRepository implements MatchRepository {
       final payload = <String, dynamic>{
         'currentWinStreak': updatedCurrent,
         'maxWinStreak': updatedMax,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (!snapshot.exists) {
+        payload['createdAt'] = FieldValue.serverTimestamp();
+        transaction.set(docRef, payload);
+      } else {
+        transaction.update(docRef, payload);
+      }
+    }
+  }
+
+  Future<void> _applyRatingUpdates({
+    required Transaction transaction,
+    required Map<String, int> deltas,
+  }) async {
+    for (final entry in deltas.entries) {
+      final playerId = entry.key;
+      final delta = entry.value;
+      final docRef = _playersCollection.doc(playerId);
+      final snapshot = await transaction.get(docRef);
+      final data = snapshot.data() ?? <String, dynamic>{};
+      final current = (data['rating'] as num?)?.toInt() ?? 1000;
+      final updated = max(0, current + delta);
+
+      final payload = <String, dynamic>{
+        'rating': updated,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 

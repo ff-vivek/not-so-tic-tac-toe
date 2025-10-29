@@ -20,6 +20,7 @@ class FirebasePlayerProfileRepository implements PlayerProfileRepository {
           id: playerId,
           currentWinStreak: 0,
           maxWinStreak: 0,
+          rating: 1000,
         );
       }
       return PlayerProfile.fromMap(id: snapshot.id, data: data);
@@ -35,6 +36,7 @@ class FirebasePlayerProfileRepository implements PlayerProfileRepository {
         final data = snapshot.data()!;
         final hasCurrent = data.containsKey('currentWinStreak');
         final hasMax = data.containsKey('maxWinStreak');
+        final hasRating = data.containsKey('rating');
         final hasCurrency = data.containsKey('currencySoft');
         final hasInventory = data.containsKey('inventory');
         if (hasCurrent && hasMax) {
@@ -44,6 +46,7 @@ class FirebasePlayerProfileRepository implements PlayerProfileRepository {
         final updates = <String, dynamic>{};
         if (!hasCurrent) updates['currentWinStreak'] = 0;
         if (!hasMax) updates['maxWinStreak'] = 0;
+        if (!hasRating) updates['rating'] = 1000;
         if (!hasCurrency) updates['currencySoft'] = 0;
         if (!hasInventory) {
           updates['inventory'] = {

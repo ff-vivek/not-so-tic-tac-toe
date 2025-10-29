@@ -20,6 +20,7 @@ import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/ultim
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/widgets/modifier_category_reveal.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/player/controllers/player_profile_providers.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/player/widgets/player_streak_badge.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/player/widgets/player_rating_badge.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/highlights/highlight_share_target.dart';
 
 class GameHomePage extends ConsumerWidget {
@@ -82,6 +83,8 @@ class GameHomePage extends ConsumerWidget {
                       matchmakingState: matchmakingState,
                       onSettingsTap: () => _showAccountSheet(context),
                       onHistoryTap: () => _showComingSoon(context, 'Match history'),
+                      onTournamentsTap: () => _showTournamentsSheet(context, ref),
+                      onClansTap: () => _showClansSheet(context, ref),
                     ),
                     const SizedBox(height: 24),
                     Expanded(
@@ -233,6 +236,83 @@ class GameHomePage extends ConsumerWidget {
     );
   }
 
+  Future<void> _showTournamentsSheet(BuildContext context, WidgetRef ref) async {
+    final repo = ref.read(tournamentRepositoryProvider);
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Tournaments', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              Text(
+                'Backend is ready. Create or join a sample tournament to test. UI list coming soon.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () async {
+                  final id = await repo.createTournament(name: 'Test Cup', maxPlayers: 8);
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Created tournament $id')),
+                  );
+                },
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Create Test Tournament'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showClansSheet(BuildContext context, WidgetRef ref) async {
+    final clanRepo = ref.read(clanRepositoryProvider);
+    final playerId = ref.read(playerIdProvider);
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Clans & Chat', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              Text(
+                'Create a clan and start chatting. Full UI coming soon — this is a backend smoke test.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () async {
+                  final id = await clanRepo.createClan(name: 'My Clan', ownerId: playerId);
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Created clan $id')),
+                  );
+                },
+                icon: const Icon(Icons.group_add_rounded),
+                label: const Text('Create Clan'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showAccountSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -256,9 +336,17 @@ class _IdleView extends ConsumerWidget {
     Widget? streakBadge;
     profileAsync.when(
       data: (profile) {
-        streakBadge = PlayerStreakBadge(
-          profile: profile,
-          showMaxLabel: true,
+        streakBadge = Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            PlayerRatingBadge(profile: profile),
+            const SizedBox(width: 10),
+            PlayerStreakBadge(
+              profile: profile,
+              showMaxLabel: true,
+            ),
+          ],
         );
       },
       loading: () {
@@ -781,9 +869,13 @@ class _MatchViewState extends ConsumerState<_MatchView> {
       data: (profile) {
         streakBadge = Align(
           alignment: Alignment.centerRight,
-          child: PlayerStreakBadge(
-            profile: profile,
-            dense: true,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PlayerRatingBadge(profile: profile, dense: true),
+              const SizedBox(width: 8),
+              PlayerStreakBadge(profile: profile, dense: true),
+            ],
           ),
         );
       },
@@ -1150,11 +1242,15 @@ class _GameHeader extends StatelessWidget {
     required this.matchmakingState,
     required this.onSettingsTap,
     required this.onHistoryTap,
+    this.onTournamentsTap,
+    this.onClansTap,
   });
 
   final MatchmakingState matchmakingState;
   final VoidCallback onSettingsTap;
   final VoidCallback onHistoryTap;
+  final VoidCallback? onTournamentsTap;
+  final VoidCallback? onClansTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1197,6 +1293,22 @@ class _GameHeader extends StatelessWidget {
               child: _HeaderIconButton(
                 icon: Icons.history_rounded,
                 onPressed: onHistoryTap,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Tooltip(
+              message: 'Tournaments',
+              child: _HeaderIconButton(
+                icon: Icons.emoji_events_rounded,
+                onPressed: onTournamentsTap ?? () {},
+              ),
+            ),
+            const SizedBox(width: 12),
+            Tooltip(
+              message: 'Clans & Chat',
+              child: _HeaderIconButton(
+                icon: Icons.groups_rounded,
+                onPressed: onClansTap ?? () {},
               ),
             ),
             const SizedBox(width: 12),
