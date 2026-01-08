@@ -13,6 +13,7 @@ ThemeData buildAppTheme() {
       background: const Color(0xFFF1FAEE),
       surface: Colors.white,
     ),
+    useMaterial3: true,
   );
 
   return base.copyWith(
