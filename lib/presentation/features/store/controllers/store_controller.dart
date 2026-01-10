@@ -122,8 +122,9 @@ class StoreState {
 }
 
 /// Controller that manages local-only store logic. No backend required.
-class StoreController extends StateNotifier<StoreState> {
-  StoreController() : super(const StoreState(balance: 800, ownedIds: {}));
+class StoreController extends Notifier<StoreState> {
+  @override
+  StoreState build() => const StoreState(balance: 800, ownedIds: {});
 
   void grantCoins(int amount) {
     final next = (state.balance + amount).clamp(0, 999999);
@@ -152,4 +153,4 @@ class StoreController extends StateNotifier<StoreState> {
   }
 }
 
-final storeControllerProvider = StateNotifierProvider<StoreController, StoreState>((ref) => StoreController());
+final storeControllerProvider = NotifierProvider<StoreController, StoreState>(StoreController.new);
