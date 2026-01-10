@@ -258,3 +258,102 @@ class FirebaseAuthManager implements AuthManager {
     await user.delete();
   }
 }
+
+/// A minimal offline AuthManager that simulates an authenticated user without Firebase.
+/// Useful when no backend is connected; only provides a stable pseudo user id and emits changes.
+class LocalAuthManager implements AuthManager {
+  LocalAuthManager() {
+    _currentUserId = _generatePseudoUserId();
+  }
+
+  String? _currentUserId;
+  final _controller = StreamController<String?>.broadcast();
+
+  @override
+  String? get currentUserId => _currentUserId;
+
+  @override
+  User? get currentUser => null;
+
+  @override
+  Stream<String?> userIdChanges() => _controller.stream;
+
+  @override
+  Future<void> ensureAuthenticated() async {
+    if (_currentUserId == null) {
+      _currentUserId = _generatePseudoUserId();
+      _controller.add(_currentUserId);
+    }
+  }
+
+  @override
+  Future<void> signOut() async {
+    // Rotate to a new anonymous id instead of going null to keep the app usable.
+    _currentUserId = _generatePseudoUserId();
+    _controller.add(_currentUserId);
+  }
+
+  @override
+  Future<UserCredential> signInWithGoogle({bool linkIfAnonymous = true}) =>
+      _unsupported();
+
+  @override
+  Future<UserCredential> signInWithApple({bool linkIfAnonymous = true}) =>
+      _unsupported();
+
+  @override
+  Future<UserCredential> signInWithEmailPassword(String email, String password, {bool linkIfAnonymous = true}) =>
+      _unsupported();
+
+  @override
+  Future<UserCredential> signUpWithEmailPassword(String email, String password, {bool linkIfAnonymous = true}) =>
+      _unsupported();
+
+  @override
+  Future<UserCredential> linkWithGoogle() => _unsupported();
+
+  @override
+  Future<UserCredential> linkWithApple() => _unsupported();
+
+  @override
+  Future<UserCredential> linkWithEmailPassword(String email, String password) => _unsupported();
+
+  @override
+  Future<User> unlinkProvider(String providerId) =>
+      Future.error(UnsupportedError('Auth provider unlink not available offline'));
+
+  @override
+  List<String> linkedProviderIds() => const [];
+
+  @override
+  Future<void> updateDisplayName(String displayName) async {}
+
+  @override
+  Future<void> updatePhotoUrl(String? photoUrl) async {}
+
+  @override
+  Future<void> reloadUser() async {}
+
+  @override
+  Future<UserCredential> reauthenticateWithEmail(String email, String password) => _unsupported();
+
+  @override
+  Future<UserCredential> reauthenticateWithProvider(String providerId) => _unsupported();
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async =>
+      Future.error(UnsupportedError('Password reset not available offline'));
+
+  @override
+  Future<void> deleteAccount() async {}
+
+  Future<UserCredential> _unsupported() =>
+      Future.error(UnsupportedError('Sign-in is not available in offline mode'));
+}
+
+String _generatePseudoUserId() {
+  // Simple pseudo id; stable enough for a session. Avoids external packages.
+  final millis = DateTime.now().millisecondsSinceEpoch;
+  final rand = (millis % 9973).toRadixString(36);
+  return 'local_$millis$rand';
+}

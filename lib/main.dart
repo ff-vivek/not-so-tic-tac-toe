@@ -11,17 +11,25 @@ import './presentation/app/game_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
 
-  // Ensure session persistence is robust on web.
-  if (kIsWeb) {
-    await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+  AuthManager authManager;
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+    if (kIsWeb) {
+      await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+    }
+
+    authManager = FirebaseAuthManager(FirebaseAuth.instance);
+    await authManager.ensureAuthenticated();
+  } catch (e, st) {
+    debugPrint('Firebase not initialized. Running in offline mode. Error: $e');
+    debugPrint('$st');
+    // Guidance for Dreamflow users about enabling backend via panel.
+    debugPrint('Hint: To use Firebase features, open the Firebase panel in Dreamflow and complete setup.');
+    authManager = LocalAuthManager();
+    await authManager.ensureAuthenticated();
   }
-
-  final authManager = FirebaseAuthManager(FirebaseAuth.instance);
-  await authManager.ensureAuthenticated();
 
   runApp(
     ProviderScope(

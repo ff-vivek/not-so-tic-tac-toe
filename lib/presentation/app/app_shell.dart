@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/pages/game_home_page.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/store/widgets/gridlock_store_view.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -29,8 +31,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         onDestinationSelected: (i) async {
           setState(() => _index = i);
           if (i == 3) {
-            // Store tab
-            await ref.read(analyticsServiceProvider).storeVisit(source: 'tab');
+            try {
+              await ref.read(analyticsServiceProvider).storeVisit(source: 'tab');
+            } catch (e) {
+              debugPrint('Analytics disabled or unavailable: $e');
+            }
           }
         },
         destinations: const [
@@ -154,15 +159,7 @@ class _StorePage extends StatelessWidget {
     return _GradientScaffold(
       title: 'Gridlock Store',
       subtitle: 'Skins and cosmetics to flex on the board.',
-      child: Center(
-        child: Text(
-          'Store coming soon',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(color: Colors.white),
-        ),
-      ),
+      child: const GridlockStoreView(),
     );
   }
 }
