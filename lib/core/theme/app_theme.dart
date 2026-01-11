@@ -25,7 +25,7 @@ ThemeData buildAppTheme() {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
+        minimumSize: const Size(0, 48),
         textStyle: const TextStyle(
           fontWeight: FontWeight.bold,
           fontFamily: 'NotoSans',
@@ -56,7 +56,7 @@ ThemeData buildDarkAppTheme() {
     textTheme: base.textTheme.apply(fontFamily: 'NotoSans'),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
+        minimumSize: const Size(0, 48),
         textStyle: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'NotoSans'),
       ),
     ),
