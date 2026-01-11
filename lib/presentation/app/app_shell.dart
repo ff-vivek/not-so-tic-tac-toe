@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:not_so_tic_tac_toe_game/core/di/providers.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/game/pages/game_home_page.dart';
 import 'package:not_so_tic_tac_toe_game/presentation/features/store/widgets/gridlock_store_view.dart';
+import 'package:not_so_tic_tac_toe_game/presentation/features/settings/pages/settings_page.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -20,6 +21,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     const _ProfilePage(),
     const _LeaderboardsPage(),
     const _StorePage(),
+    const SettingsPage(),
   ];
 
   @override
@@ -58,6 +60,11 @@ class _AppShellState extends ConsumerState<AppShell> {
             icon: Icon(Icons.storefront_outlined),
             selectedIcon: Icon(Icons.storefront_rounded),
             label: 'Store',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings_rounded),
+            label: 'Settings',
           ),
         ],
       ),

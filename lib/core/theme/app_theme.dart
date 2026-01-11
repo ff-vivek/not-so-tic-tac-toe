@@ -34,3 +34,31 @@ ThemeData buildAppTheme() {
     ),
   );
 }
+
+ThemeData buildDarkAppTheme() {
+  const primaryColor = Color(0xFF99C1DE);
+  const accentColor = Color(0xFFFF6B6B);
+
+  final base = ThemeData.from(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: primaryColor,
+      primary: primaryColor,
+      secondary: accentColor,
+      brightness: Brightness.dark,
+      background: const Color(0xFF0E1116),
+      surface: const Color(0xFF141922),
+    ),
+    useMaterial3: true,
+  );
+
+  return base.copyWith(
+    scaffoldBackgroundColor: const Color(0xFF0E1116),
+    textTheme: base.textTheme.apply(fontFamily: 'NotoSans'),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'NotoSans'),
+      ),
+    ),
+  );
+}
